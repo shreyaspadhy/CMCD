@@ -17,6 +17,7 @@ def initialize(dim, vdparams=None, nbridges=0, eps=0.01, gamma = 10., eta = 0.5,
 		- MCD_ULA_sn: This is MCD. Method from Doucet et al.
 		- MCD_U_a-lp: UHA but with approximate sampling of momentum (no score network).
 		- MCD_U_a-lp-sn: Approximate sampling of momentum, followed by leapfrog, using score network(x, rho) for backward sampling.
+		- MCD_CAIS_sn: CAIS with trainable SN.
 		"""
 	params_train = {} # Has all trainable parameters
 	params_notrain = {} # Non trainable parameters
@@ -45,7 +46,7 @@ def initialize(dim, vdparams=None, nbridges=0, eps=0.01, gamma = 10., eta = 0.5,
 	else:
 		params_notrain['eta'] = eta
 
-	if mode in ["MCD_ULA_sn", "MCD_U_e-lp-sna", "MCD_U_a-lp-sna"]:
+	if mode in ["MCD_ULA_sn", "MCD_U_e-lp-sna", "MCD_U_a-lp-sna", "MCD_CAIS_sn"]:
 		init_fun_sn, apply_fun_sn = initialize_mcd_network(dim, emb_dim, nbridges, nlayers=3)
 		params_train['sn'] = init_fun_sn(jax.random.PRNGKey(seed), None)[1]
 	elif mode in ["MCD_U_a-lp-sn", "MCD_U_ea-lp-sn", "MCD_U_a-nv-sn"]:

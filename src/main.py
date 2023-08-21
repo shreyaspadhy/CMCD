@@ -31,6 +31,7 @@ info = args_parser.parse_args()
 # 	- MCD uses MCD_ULA_sn
 #	- UHA uses UHA
 # 	- LDVI uses MCD_U_a-lp-sn
+#   - CAIS uses MCD_CAIS_sn
 
 iters_base=info.iters
 log_prob_model, dim = load_model(info.model)
