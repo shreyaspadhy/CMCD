@@ -8,7 +8,6 @@ from mcd_under_me_e import evolve_underdamped_me_e
 from mcd_under_lp_e import evolve_underdamped_lp_e
 from mcd_under_lp_a import evolve_underdamped_lp_a
 from mcd_under_lp_ea import evolve_underdamped_lp_ea
-from mcd_under_naive import evolve_underdamped_nv_a
 
 
 # For transition kernel

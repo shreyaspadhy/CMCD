@@ -5,7 +5,6 @@ import jax
 from jax.flatten_util import ravel_pytree
 import argparse
 import boundingmachine as bm
-import iwboundingmachine as iwbm
 import mcdboundingmachine as mcdbm
 import opt
 from model_handler import load_model

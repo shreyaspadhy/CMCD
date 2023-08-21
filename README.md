@@ -1,2 +1,10 @@
-# LDVI
-Code for paper "Langevin Diffusion Variational Inference"
+# CAIS
+
+To run ULA, 
+
+`python main.py -model log_ionosphere -boundmode MCD_ULA`
+
+- ULA uses MCD_ULA
+- MCD uses MCD_ULA_sn
+- UHA uses UHA
+- LDVI uses MCD_U_a-lp-sn
