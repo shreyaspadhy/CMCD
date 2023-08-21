@@ -4,6 +4,7 @@ from jax.flatten_util import ravel_pytree
 from tqdm import tqdm
 import sys
 import functools
+import wandb
 
 def adam(step_size, b1 = 0.9, b2 = 0.999, eps = 1e-8):
 	# Basically JAX's thing with added projection for some parameters.
@@ -50,7 +51,7 @@ def collect_gamma(params_flat, unflatten, trainable):
 		return unflatten(params_flat)[0]['gamma']
 	return 0.
 
-def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss, trainable, rng_key_gen, extra=True):
+def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss, trainable, rng_key_gen, extra=True, log_prefix=''):
 	# try:
 	opt_init, update, get_params = adam(lr)
 	update = jax.jit(update, static_argnums = (3, 4))
@@ -67,6 +68,7 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
 			tracker['gamma'].append(collect_gamma(params_flat, unflatten, trainable))
 		grad, (loss, _) = grad_and_loss(seeds, params_flat, unflatten, params_fixed, log_prob_model)
 		losses.append(loss.item())
+		wandb.log({f'{log_prefix}/loss': loss.item()})
 		if np.isnan(loss):
 			print('Diverged')
 			return [], True, params_flat, tracker

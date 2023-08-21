@@ -9,22 +9,18 @@ import mcdboundingmachine as mcdbm
 import opt
 from model_handler import load_model
 import pickle
+import ml_collections.config_flags
+import wandb
+from absl import app, flags
 
+ml_collections.config_flags.DEFINE_config_file(
+    "config",
+    "configs/base.py",
+    "Training configuration.",
+    lock_config=True,
+)
+FLAGS = flags.FLAGS
 
-savedir = '/mnt/nfs/work1/domke/tgeffner/AIS_score/results/'
-
-args_parser = argparse.ArgumentParser(description='Process arguments')
-args_parser.add_argument('-boundmode', type=str, default='UHA', help='Determines what method to use, see main.py.')
-args_parser.add_argument('-model', type=str, default='log_sonar', help='Model to use.')
-args_parser.add_argument('-N', type=int, default=5, help='Number of samples to estimate gradient at each step.')
-args_parser.add_argument('-nbridges', type=int, default=10, help='Number of bridging densities.')
-args_parser.add_argument('-lfsteps', type=int, default=1, help='Leapfrog steps, for UHA.')
-args_parser.add_argument('-iters', type=int, default=15000, help='Number of iterations.')
-args_parser.add_argument('-lr', type=float, default=0.01, help='Learning rate.')
-args_parser.add_argument('-seed', type=int, default=1, help='Random seed to use.')
-args_parser.add_argument('-id', type=int, default=-1, help='Unique ID for each run.')
-args_parser.add_argument('-run_cluster', type=int, default=0, help='1: Running on cluster, 0: no cluster (for plotting, etc).')
-info = args_parser.parse_args()
 
 # Boundmodes
 # 	- ULA uses MCD_ULA
@@ -33,48 +29,79 @@ info = args_parser.parse_args()
 # 	- LDVI uses MCD_U_a-lp-sn
 #   - CAIS uses MCD_CAIS_sn
 
-iters_base=info.iters
-log_prob_model, dim = load_model(info.model)
-rng_key_gen = jax.random.PRNGKey(info.seed)
+def main(config):
+	wandb_kwargs = {
+			"project": config.wandb.project,
+			"entity": config.wandb.entity,
+			"config": config,
+			"name": config.wandb.name if config.wandb.name else None,
+			"mode": "online" if config.wandb.log else "disabled",
+			"settings": wandb.Settings(code_dir=config.wandb.code_dir),
+		}
+	with wandb.init(**wandb_kwargs) as run:
+		iters_base=config.iters
+		log_prob_model, dim = load_model(config.model)
+		rng_key_gen = jax.random.PRNGKey(config.seed)
 
-# Train initial variational distribution to maximize the ELBO
-trainable=('vd',)
-params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=0, trainable=trainable)
-grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
-losses, diverged, params_flat, tracker = opt.run(info, 0.01, iters_base, params_flat, unflatten, params_fixed,
-	log_prob_model, grad_and_loss, trainable, rng_key_gen)
-vdparams_init = unflatten(params_flat)[0]['vd']
+		# Train initial variational distribution to maximize the ELBO
+		trainable=('vd',)
+		params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=0, trainable=trainable)
+		grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
+		losses, diverged, params_flat, tracker = opt.run(
+			config, 0.01, iters_base, params_flat, unflatten, params_fixed,
+			log_prob_model, grad_and_loss, trainable, rng_key_gen, log_prefix='pretrain')
+		vdparams_init = unflatten(params_flat)[0]['vd']
 
-elbo_init = -np.mean(np.array(losses[-500:]))
-print('Done training initial parameters, got ELBO %.2f.' % elbo_init)
+		elbo_init = -np.mean(np.array(losses[-500:]))
+		print('Done training initial parameters, got ELBO %.2f.' % elbo_init)
 
-if info.boundmode == 'UHA':
-	trainable = ('vd', 'eps', 'eta', 'mgridref_y')
-	params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=info.nbridges, eta=0.0, eps = 0.00001,
-		lfsteps=info.lfsteps, vdparams=vdparams_init, trainable=trainable)
-	grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
+		if config.boundmode == 'UHA':
+			trainable = ('vd', 'eps', 'eta', 'mgridref_y')
+			params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=config.nbridges, eta=0.0, eps = 0.00001,
+				lfsteps=config.lfsteps, vdparams=vdparams_init, trainable=trainable)
+			grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
 
-elif 'MCD' in info.boundmode:
-	trainable = ('vd', 'eps', 'eta', 'gamma', 'mgridref_y')
-	params_flat, unflatten, params_fixed = mcdbm.initialize(dim=dim, nbridges=info.nbridges, vdparams=vdparams_init, eta=0.0, eps = 0.00001,
-		trainable=trainable, mode=info.boundmode)
-	grad_and_loss = jax.jit(jax.grad(mcdbm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
+		elif 'MCD' in config.boundmode:
+			trainable = ('vd', 'eps', 'eta', 'gamma', 'mgridref_y')
+			params_flat, unflatten, params_fixed = mcdbm.initialize(dim=dim, nbridges=config.nbridges, vdparams=vdparams_init, eta=0.0, eps = 0.00001,
+				trainable=trainable, mode=config.boundmode)
+			grad_and_loss = jax.jit(jax.grad(mcdbm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
 
-else:
-	raise NotImplementedError('Mode %s not implemented.' % info.boundmode)
+		else:
+			raise NotImplementedError('Mode %s not implemented.' % config.boundmode)
 
-losses, diverged, params_flat, tracker = opt.run(info, info.lr, info.iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss,
-	trainable, rng_key_gen)
+		losses, diverged, params_flat, tracker = opt.run(config, config.lr, config.iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss,
+			trainable, rng_key_gen, log_prefix='train')
 
-final_elbo = -np.mean(np.array(losses[-500:]))
-print('Done training, got ELBO %.2f.' % final_elbo)
+		final_elbo = -np.mean(np.array(losses[-500:]))
+		print('Done training, got ELBO %.2f.' % final_elbo)
 
-tracker['elbo_init'] = elbo_init
-tracker['elbo_final'] = final_elbo
-tracker["diverged"] = diverged
+		tracker['elbo_init'] = elbo_init
+		tracker['elbo_final'] = final_elbo
+		tracker["diverged"] = diverged
 
-print(elbo_init, final_elbo)
+		print(elbo_init, final_elbo)
 
-params_train, params_notrain = unflatten(params_flat)
-params = {**params_train, **params_notrain}
+		params_train, params_notrain = unflatten(params_flat)
+		params = {**params_train, **params_notrain}
 
+
+if __name__ == "__main__":
+    import os
+    import sys
+
+    # if sys.argv:
+    #     # pass wandb API as argv[1] and set environment variable
+    #     # 'python mll_optim.py MY_API_KEY'
+        # os.environ["WANDB_API_KEY"] = sys.argv[1]
+
+    # Adds jax flags to the program.
+    jax.config.config_with_absl()
+
+    # Snippet to pass configs into the main function.
+    def _main(argv):
+        del argv
+        config = FLAGS.config
+        main(config)
+
+    app.run(_main)

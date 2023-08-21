@@ -1,1 +1,4 @@
 *.pyc
+results/*
+*/wandb/*
+src/wandb/*
