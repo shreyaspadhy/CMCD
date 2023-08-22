@@ -36,6 +36,7 @@ def evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob
 		aux = z_new, w, rng_key_gen
 		return aux, None
 
+	print(f'running CAIS')
 	dim, nbridges, mode, apply_fun_sn = params_fixed
 	# Evolve system
 	rng_key, rng_key_gen = jax.random.split(rng_key_gen)

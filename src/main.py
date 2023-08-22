@@ -12,6 +12,8 @@ import pickle
 import ml_collections.config_flags
 import wandb
 from absl import app, flags
+from utils import flatten_nested_dict
+
 
 ml_collections.config_flags.DEFINE_config_file(
     "config",
@@ -30,10 +32,11 @@ FLAGS = flags.FLAGS
 #   - CAIS uses MCD_CAIS_sn
 
 def main(config):
+	print(config)
 	wandb_kwargs = {
 			"project": config.wandb.project,
 			"entity": config.wandb.entity,
-			"config": config,
+			"config": flatten_nested_dict(config.to_dict()),
 			"name": config.wandb.name if config.wandb.name else None,
 			"mode": "online" if config.wandb.log else "disabled",
 			"settings": wandb.Settings(code_dir=config.wandb.code_dir),
