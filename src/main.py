@@ -1,6 +1,7 @@
 import numpyro
 import numpyro.distributions as dist
 import jax.numpy as np
+import numpy as onp
 import jax
 from jax.flatten_util import ravel_pytree
 import argparse
@@ -12,14 +13,14 @@ import pickle
 import ml_collections.config_flags
 import wandb
 from absl import app, flags
-from utils import flatten_nested_dict
+from utils import flatten_nested_dict, update_config_dict, setup_training
 
 
 ml_collections.config_flags.DEFINE_config_file(
     "config",
     "configs/base.py",
     "Training configuration.",
-    lock_config=True,
+    lock_config=False,
 )
 FLAGS = flags.FLAGS
 
@@ -32,7 +33,6 @@ FLAGS = flags.FLAGS
 #   - CAIS uses MCD_CAIS_sn
 
 def main(config):
-	print(config)
 	wandb_kwargs = {
 			"project": config.wandb.project,
 			"entity": config.wandb.entity,
@@ -42,6 +42,10 @@ def main(config):
 			"settings": wandb.Settings(code_dir=config.wandb.code_dir),
 		}
 	with wandb.init(**wandb_kwargs) as run:
+		setup_training(run)
+		update_config_dict(config, run, {})
+
+		print(config)
 		iters_base=config.iters
 		log_prob_model, dim = load_model(config.model)
 		rng_key_gen = jax.random.PRNGKey(config.seed)
@@ -57,6 +61,7 @@ def main(config):
 
 		elbo_init = -np.mean(np.array(losses[-500:]))
 		print('Done training initial parameters, got ELBO %.2f.' % elbo_init)
+		wandb.log({'elbo_init': onp.array(elbo_init)})
 
 		if config.boundmode == 'UHA':
 			trainable = ('vd', 'eps', 'eta', 'mgridref_y')
@@ -78,6 +83,7 @@ def main(config):
 
 		final_elbo = -np.mean(np.array(losses[-500:]))
 		print('Done training, got ELBO %.2f.' % final_elbo)
+		wandb.log({'elbo_final': onp.array(final_elbo)})
 
 		tracker['elbo_init'] = elbo_init
 		tracker['elbo_final'] = final_elbo
