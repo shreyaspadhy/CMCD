@@ -14,26 +14,27 @@ def evolve_underdamped_lp_a(z, betas, params, rng_key_gen, params_fixed, log_pro
 		# Forward kernel
 		eta_aux = params["gamma"] * params["eps"] 
 		input_sn_old = np.concatenate([z, rho])
-		fk_rho_mean = rho * (1. - eta_aux) - 2 * eta_aux * apply_fun_sn(params["sn"], input_sn_old, i)
-# 		fk_rho_mean = rho * (1. - eta_aux)
+		fk_rho_mean = rho * (1. - eta_aux)
+
 		scale = np.sqrt(2. * eta_aux)
 
 		rng_key, rng_key_gen = jax.random.split(rng_key_gen)
 		rho_prime = sample_kernel(rng_key, fk_rho_mean, scale)
 
-		rho_prime_prime = rho_prime - params["eps"] * jax.grad(U)(z, beta) / 2.
+		rho_prime_prime = rho_prime - params["eps"] * jax.grad(U)(z, beta) / 2.- 2 * eta_aux * apply_fun_sn(params["sn"], input_sn_old, i)
 		z_new = z + params["eps"] * rho_prime_prime
-		rho_new = rho_prime_prime - params["eps"] * jax.grad(U)(z_new, beta) / 2.
+        input_sn_new = np.concatenate([z_new, rho_prime_prime])
+		rho_new = rho_prime_prime - params["eps"] * jax.grad(U)(z_new, beta) / 2. - 2 * eta_aux * apply_fun_sn(params["sn"], input_sn_new, i)
 
 		# Backwards kernel
-		if not use_sn:
-			bk_rho_mean = rho_prime * (1. - eta_aux)
-		else:
-			if not full_sn:
-				bk_rho_mean = rho_prime * (1. - eta_aux) + 2 * eta_aux * apply_fun_sn(params["sn"], z, i) # No real reason for this, just to try
-			else:
-				input_sn = np.concatenate([z, rho_prime])
-				bk_rho_mean = rho_prime * (1. - eta_aux) + 2 * eta_aux * apply_fun_sn(params["sn"], input_sn, i)
+# 		if not use_sn:
+		bk_rho_mean = rho_prime * (1. - eta_aux)
+# 		else:
+# 			if not full_sn:
+# 				bk_rho_mean = rho_prime * (1. - eta_aux) + 2 * eta_aux * apply_fun_sn(params["sn"], z, i) # No real reason for this, just to try
+# 			else:
+# 				input_sn = np.concatenate([z, rho_prime])
+# 				bk_rho_mean = rho_prime * (1. - eta_aux) + 2 * eta_aux * apply_fun_sn(params["sn"], input_sn, i+1)
 
 		# Evaluate kernels
 		fk_log_prob = log_prob_kernel(rho_prime, fk_rho_mean, scale)
