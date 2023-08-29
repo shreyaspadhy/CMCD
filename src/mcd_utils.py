@@ -7,6 +7,7 @@ from mcd_over_orig import evolve_overdamped_orig
 from mcd_under_me_e import evolve_underdamped_me_e
 from mcd_under_lp_e import evolve_underdamped_lp_e
 from mcd_under_lp_a import evolve_underdamped_lp_a
+from mcd_under_lp_a_cais import evolve_underdamped_lp_a_cais
 from mcd_under_lp_ea import evolve_underdamped_lp_ea
 from mcd_cais import evolve_overdamped_cais
 
@@ -43,6 +44,9 @@ def evolve(z, betas, params, rng_key_gen, params_fixed, log_prob_model):
 			full_sn=True)
 	elif mode == "MCD_CAIS_sn":
 		return evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=True)
+	elif mode == "MCD_CAIS_UHA_sn":
+		return evolve_underdamped_lp_a_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=True,
+			full_sn=True)
 	else:
 		raise NotImplementedError("Mode not implemented.")
 

@@ -3,7 +3,7 @@ import jax.numpy as np
 import variationaldist as vd
 
 
-def evolve_underdamped_lp_a(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=False, full_sn=True):
+def evolve_underdamped_lp_a_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=False, full_sn=True):
 	def U(z, beta):
 		return -1. * (beta * log_prob_model(z) + (1. - beta) * vd.log_prob(params["vd"], z))
 
@@ -23,7 +23,7 @@ def evolve_underdamped_lp_a(z, betas, params, rng_key_gen, params_fixed, log_pro
 
 		rho_prime_prime = rho_prime - params["eps"] * jax.grad(U)(z, beta) / 2.- 2 * eta_aux * apply_fun_sn(params["sn"], input_sn_old, i)
 		z_new = z + params["eps"] * rho_prime_prime
-        input_sn_new = np.concatenate([z_new, rho_prime_prime])
+		input_sn_new = np.concatenate([z_new, rho_prime_prime])
 		rho_new = rho_prime_prime - params["eps"] * jax.grad(U)(z_new, beta) / 2. - 2 * eta_aux * apply_fun_sn(params["sn"], input_sn_new, i)
 
 		# Backwards kernel
