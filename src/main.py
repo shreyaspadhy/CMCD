@@ -88,41 +88,39 @@ def main(config):
 		losses, diverged, params_flat, tracker = opt.run(config, config.lr, config.iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss,
 			trainable, train_rng_key_gen, log_prefix='train')
 
-		# TODO: Rerun again from trained params without updates for 30 * 500 steps, and average.
-
-		n_samples = 500
-		n_input_dist_seeds = 30
+		# Average over 30 seeds, 500 samples each after training is done.
+		n_samples = config.n_samples
+		n_input_dist_seeds = config.n_input_dist_seeds
 
 		eval_losses = opt.sample(
 			config, n_samples, n_input_dist_seeds, params_flat, unflatten, params_fixed, log_prob_model, loss_fn,
 			eval_rng_key_gen, log_prefix='eval')
 
+		# (n_input_dist_seeds, n_samples)
 		eval_losses = np.array(eval_losses)
 
-		print(f'eval_losses : ', eval_losses.shape)
+		# Calculate mean and std of ELBOs over 30 seeds
 		final_elbos = -np.mean(eval_losses, axis=1)
 		final_elbo = np.mean(final_elbos)
 		final_elbo_std = np.std(final_elbos)
-		# final_elbo_old = -np.mean(np.array(losses[-500:]))
 
+		# Calculate mean and std of log Zs over 30 seeds
 		ln_numsamp = np.log(n_samples)
 
 		final_ln_Zs = jscipy.special.logsumexp(-np.array(eval_losses), axis=1)  - ln_numsamp
 
 		final_ln_Z = np.mean(final_ln_Zs)
 		final_ln_Z_std = np.std(final_ln_Zs)
-		print(final_elbos.shape, final_ln_Zs.shape)
+
 		print('Done training, got ELBO %.2f.' % final_elbo)
+		print('Done training, got ln Z %.2f.' % final_ln_Z)
+
 		wandb.log({
 			'elbo_final': onp.array(final_elbo),
 			'final_ln_Z': onp.array(final_ln_Z),
 			'elbo_final_std': onp.array(final_elbo_std),
 			'final_ln_Z_std': onp.array(final_ln_Z_std)
 			})
-
-		# print(f'old final elbo : {final_elbo_old}, new final elbo : {final_elbo}')
-
-		print(elbo_init, final_elbo)
 
 		params_train, params_notrain = unflatten(params_flat)
 		params = {**params_train, **params_notrain}

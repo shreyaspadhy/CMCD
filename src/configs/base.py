@@ -8,11 +8,13 @@ def get_config():
     config.N = 5
     config.nbridges = 8
     config.lfsteps = 1
-    config.iters = 15000
+    config.iters = 150000
     config.lr = 0.001
     config.seed = 1
     config.id = -1
     config.run_cluster = 0
+    config.n_samples = 500
+    config.n_input_dist_seeds = 30
 
     cwd = os.getcwd()
     config.savedir = os.path.join(cwd, "results", config.model, config.boundmode, str(config.id))
