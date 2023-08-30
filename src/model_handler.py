@@ -14,6 +14,8 @@ models_gym = ['lorenz', 'brownian', 'banana']
 def load_model(model = 'log_sonar'):
 	if model in models_gym:
 		return load_model_gym(model)
+	if 'nice' in model:
+		return load_model_nice(model)
 	return load_model_other(model)
 
 
@@ -47,6 +49,10 @@ def load_model_other(model = 'log_sonar'):
 	dim = params_flat.shape[0]
 	unflatten_and_constrain = lambda z: constrain_fn(unflattener(z))
 	return log_prob_model, dim
+
+
+def load_model_nice(model = 'size=14_nbits=3_alpha=0.5'):
+	pass
 
 
 

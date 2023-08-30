@@ -6,10 +6,10 @@ def get_config():
     config.boundmode = "UHA"
     config.model = "log_sonar"
     config.N = 5
-    config.nbridges = 10
+    config.nbridges = 8
     config.lfsteps = 1
     config.iters = 15000
-    config.lr = 0.01
+    config.lr = 0.001
     config.seed = 1
     config.id = -1
     config.run_cluster = 0

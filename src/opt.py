@@ -67,9 +67,9 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
 			tracker['eps'].append(collect_eps(params_flat, unflatten, trainable))
 			tracker['gamma'].append(collect_gamma(params_flat, unflatten, trainable))
 		grad, (loss, _) = grad_and_loss(seeds, params_flat, unflatten, params_fixed, log_prob_model)
-		losses.append(loss.item())
-		wandb.log({f'{log_prefix}/loss': loss.item()})
-		if np.isnan(loss):
+		losses.append(np.mean(loss).item())
+		wandb.log({f'{log_prefix}/loss': np.mean(loss).item()})
+		if np.isnan(np.mean(loss)):
 			print('Diverged')
 			return [], True, params_flat, tracker
 		opt_state = update(i, grad, opt_state, unflatten, trainable)
@@ -81,3 +81,15 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
 	# 	return [], True, None
 
 
+def sample(info, n_samples, n_input_dist_seeds, params_flat, unflatten, params_fixed, log_prob_model, loss_fn, rng_key_gen, log_prefix=''):
+	elbos, ln_zs = [], []
+
+	eval_seeds = jax.random.randint(rng_key_gen, (n_samples * n_input_dist_seeds,), 1, 1e6)
+	for i in range(n_input_dist_seeds):
+		seeds = eval_seeds[i * n_samples : (i + 1) * n_samples]
+
+		_, (loss_list, z) = loss_fn(seeds, params_flat, unflatten, params_fixed, log_prob_model)
+		
+		elbos.append([x.item() for x in loss_list])
+	
+	return elbos

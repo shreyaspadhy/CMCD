@@ -95,7 +95,7 @@ def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob):
 # @functools.partial(jax.jit, static_argnums = (2, 3, 4))
 def compute_bound(seeds, params_flat, unflatten, params_fixed, log_prob):
 	ratios, (z, _) = jax.vmap(compute_ratio, in_axes = (0, None, None, None, None))(seeds, params_flat, unflatten, params_fixed, log_prob)
-	return ratios.mean(), (ratios.mean(), z)
+	return ratios.mean(), (ratios, z)
 
 
 

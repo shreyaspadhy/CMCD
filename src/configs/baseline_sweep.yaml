@@ -8,6 +8,8 @@ parameters:
     values: ['MCD_ULA', 'MCD_ULA_sn', 'UHA', 'MCD_U_a-lp-sn', 'MCD_CAIS_sn']
   model:
     values: ['log_sonar', 'log_ionosphere', 'lorenz', 'brownian', 'banana', 'seeds']
+  lr:
+    values: [1e-3, 1e-4, 1e-5]
 
 command:
   - python
