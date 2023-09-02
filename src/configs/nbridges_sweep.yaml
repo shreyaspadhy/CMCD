@@ -1,0 +1,18 @@
+entity: shreyaspadhy
+project: cais
+program: main.py
+
+method: grid
+parameters:
+  boundmode:
+    values: ['MCD_ULA', 'MCD_ULA_sn', 'UHA', 'MCD_U_a-lp-sn', 'MCD_CAIS_sn', 'MCD_CAIS_UHA_sn']
+  model:
+    values: ['log_sonar', 'log_ionosphere', 'lorenz', 'brownian', 'banana', 'seeds']
+  nbridges:
+    values: [256, 128, 64, 32, 16, 8]
+
+command:
+  - python
+  - ${program}
+  - --config
+  - configs/base.py

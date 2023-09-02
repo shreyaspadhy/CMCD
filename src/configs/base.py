@@ -1,6 +1,47 @@
 import ml_collections
 import os
 
+
+LR_DICT = {
+    "log_sonar": {"MCD_CAIS_UHA_sn": 1e-3,
+                  "MCD_CAIS_sn": 1e-3,
+                  "MCD_U_a-lp-sn": 1e-3,
+                  "UHA": 1e-4,
+                  "MCD_ULA_sn": 1e-3,
+                  "MCD_ULA": 1e-4},
+    "log_ionosphere": {"MCD_CAIS_UHA_sn": 1e-3,
+                       "MCD_CAIS_sn": 1e-4,
+                       "MCD_U_a-lp-sn": 1e-3,
+                       "UHA": 1e-4,
+                       "MCD_ULA_sn": 1e-3,
+                       "MCD_ULA": 1e-4},
+    "lorenz": {"MCD_CAIS_UHA_sn": 1e-3,
+                "MCD_CAIS_sn": 1e-4,
+                "MCD_U_a-lp-sn": 1e-3,
+                "UHA": 1e-3,
+                "MCD_ULA_sn": 1e-4,
+                "MCD_ULA": 1e-4},
+    "brownian": {"MCD_CAIS_UHA_sn": 1e-3,
+                "MCD_CAIS_sn": 1e-3,
+                "MCD_U_a-lp-sn": 1e-3,
+                "UHA": 1e-4,
+                "MCD_ULA_sn": 1e-4,
+                "MCD_ULA": 1e-5},
+    "seeds": {"MCD_CAIS_UHA_sn": 1e-3,
+            "MCD_CAIS_sn": 1e-3,
+            "MCD_U_a-lp-sn": 1e-3,
+            "UHA": 1e-3,
+            "MCD_ULA_sn": 1e-3,
+            "MCD_ULA": 1e-4},
+    "banana": {"MCD_CAIS_UHA_sn": 1e-3,
+            "MCD_CAIS_sn": 1e-3,
+            "MCD_U_a-lp-sn": 1e-3,
+            "UHA": 1e-3,
+            "MCD_ULA_sn": 1e-3,
+            "MCD_ULA": 1e-4},
+}
+
+
 def get_config():
     config = ml_collections.ConfigDict()
     config.boundmode = "UHA"

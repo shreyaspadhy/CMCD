@@ -15,6 +15,8 @@ import wandb
 from absl import app, flags
 from utils import flatten_nested_dict, update_config_dict, setup_training
 from jax import scipy as jscipy
+from configs.base import LR_DICT
+
 
 ml_collections.config_flags.DEFINE_config_file(
     "config",
@@ -44,7 +46,14 @@ def main(config):
 		}
 	with wandb.init(**wandb_kwargs) as run:
 		setup_training(run)
-		update_config_dict(config, run, {})
+		# Load in the correct LR from sweeps
+		try:
+			new_vals = {"lr": LR_DICT[config.model][config.boundmode]}
+		except KeyError:
+			new_vals = {}
+			raise ValueError('LR not found for model %s and boundmode %s' % (config.model, config.boundmode))
+		
+		update_config_dict(config, run, new_vals)
 
 		print(config)
 		iters_base=config.iters
