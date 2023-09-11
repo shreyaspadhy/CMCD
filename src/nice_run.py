@@ -161,7 +161,7 @@ def main(config):
 
         if iteration % config.log_interval == 0:
           print(f"Itr {iteration}, Epoch {epoch}, Loss {loss}")
-          wandb.log({"loss/train": (np.array(loss)), ""})
+          wandb.log({"loss/train": (np.array(loss))})
 
         
           x_re = recons_fn(params, jax.random.PRNGKey(0), x)
