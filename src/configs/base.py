@@ -58,7 +58,6 @@ def get_config():
     config.n_input_dist_seeds = 30
 
     cwd = os.getcwd()
-    config.savedir = os.path.join(cwd, "results", config.model, config.boundmode, str(config.id))
 
     # Wandb Configs
     config.wandb = ml_collections.ConfigDict()

@@ -13,11 +13,17 @@ import optax
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from nice import NICE
+import os
+from utils import flatten_nested_dict, update_config_dict, setup_training, make_grid
+import wandb
+import numpy as np
+import pickle
 
 
-FLAGS = flags.FLAGS
+
 config_flags.DEFINE_config_file("config", ("nice_config.py"),
                                 "Run configuration.")
+FLAGS = flags.FLAGS
 
 
 def dequantize(x, y, n_bits=3):
@@ -65,124 +71,149 @@ def load_dataset(
   return tfds.as_numpy(ds)
 
 
-def run_experiment(config):
+def main(config):
   """Main experiment."""
 
-  # flatboard
-  # data_id = xdata.xm.get_data_id()
-  # print("Set up flatboard, data_id %s", str(data_id))
-  # writer_keys = ["train", "test"]
-  # writers = {
-  #     k: xdata.bt.writer(data_id, k)
-  #     for k in writer_keys
-  # }
-
-  def forward_fn():
-    flow = NICE(config.im_size ** 2, h_dim=config.hidden_dim)
-
-    def _logpx(x):
-      return flow.logpx(x)
-    def _recons(x):
-      return flow.reverse(flow.forward(x))
-    return _logpx, (_logpx, _recons)
-
-  forward = hk.multi_transform(forward_fn)
-  rng_seq = hk.PRNGSequence(config.seed)
-
-  # load data
-  ds = load_dataset("train", config.batch_size, config.im_size, config.alpha,
-                    config.n_bits)
-  ds_test = load_dataset("test", config.batch_size, config.im_size,
-                         config.alpha, config.n_bits)
-
-  # get init data
-  x, _ = next(iter(ds))
-  x = x.reshape(x.shape[0], -1)
-
-  params = forward.init(next(rng_seq), x)
-  logpx_fn, recons_fn = forward.apply
+  wandb_kwargs = {
+      "project": config.wandb.project,
+      "entity": config.wandb.entity,
+      "config": flatten_nested_dict(config.to_dict()),
+      "name": config.wandb.name if config.wandb.name else None,
+      "mode": "online" if config.wandb.log else "disabled",
+      "settings": wandb.Settings(code_dir=config.wandb.code_dir),
+    }
   
-  print("Param shapes:")
-  print(jax.tree_map(lambda x: x.shape, params))
+  with wandb.init(**wandb_kwargs) as run:
+    setup_training(run)
+    # Load in the correct LR from sweeps
+    new_vals = {}
+    update_config_dict(config, run, new_vals)
 
-  x_re = recons_fn(params, next(rng_seq), x)
-  print(f"Recons Error: {((x - x_re)**2).mean()}")
+    print(config)
 
-  opt = optax.adam(config.lr)
-  opt_state = opt.init(params)
+    def forward_fn():
+      flow = NICE(config.im_size ** 2, h_dim=config.hidden_dim)
 
-  # checkpointing
-  # print("Setting up checkpointing.")
-  # checkpoint = phoenix.Checkpoint(
-  #     base_path=os.path.join(
-  #         phoenix.checkpoint.get_default_path(),
-  #         str(data_id.experiment_id),
-  #         str(data_id.work_unit_id)),
-  #     ttl=datetime.timedelta(days=120),
-  #     history_length=20)
-  
-  iteration = 0
-  data_mean = x.mean(0)
-  data_std = x.std(0)
-  # # checkpoint is for single device, params has device axis, use first
-  # params = params
-  # opt_state = opt_state
-  # config = config
-  # for (k, w) in writers.items():
-  #   checkpoint.state.__setattr__(k, w)
+      def _logpx(x):
+        return flow.logpx(x)
+      def _recons(x):
+        return flow.reverse(flow.forward(x))
+      def _sample():
+        return flow.sample(config.batch_size)
+      return _logpx, (_logpx, _recons, _sample)
 
-  @functools.partial(jax.jit, static_argnums=3)
-  def loss_fn(params, rng, x, with_wd=True):
-    obj = logpx_fn(params, rng, x)
+    forward = hk.multi_transform(forward_fn)
+    rng_seq = hk.PRNGSequence(config.seed)
 
-    l2_loss = 0.5 * sum(jnp.sum(jnp.square(p)) for p in jax.tree_leaves(params))
-    if with_wd:
-      return -obj.mean() + config.weight_decay * l2_loss
-    else:
-      return -obj
+    # load data
+    ds = load_dataset("train", config.batch_size, config.im_size, config.alpha,
+                      config.n_bits)
+    ds_test = load_dataset("test", config.batch_size, config.im_size,
+                          config.alpha, config.n_bits)
 
-  @jax.jit
-  def update(params, opt_state, rng, x):
-    loss, grad = jax.value_and_grad(loss_fn)(params, rng, x)
+    # get init data
+    x, _ = next(iter(ds))
+    x = x.reshape(x.shape[0], -1)
 
-    updates, opt_state = opt.update(grad, opt_state)
-    new_params = optax.apply_updates(params, updates)
-    return loss, new_params, opt_state
+    params = forward.init(next(rng_seq), x)
+    logpx_fn, recons_fn, sample_fn = forward.apply
+    
+    print("Param shapes:")
+    print(jax.tree_map(lambda x: x.shape, params))
 
-  for epoch in range(config.num_epochs):
-    for x, _ in iter(ds):
+    x_re = recons_fn(params, next(rng_seq), x)
+    print(f"Recons Error: {((x - x_re)**2).mean()}")
+    wandb.log({"recons_error": (np.array((x - x_re)**2).mean())})
 
-      x = x.reshape(x.shape[0], -1)
-      loss, params, opt_state = update(
-          params, opt_state, next(rng_seq), x)
+    opt = optax.adam(config.lr)
+    opt_state = opt.init(params)
+    
+    iteration = 0
+    data_mean = x.mean(0)
+    data_std = x.std(0)
+
+    @functools.partial(jax.jit, static_argnums=3)
+    def loss_fn(params, rng, x, with_wd=True):
+      obj = logpx_fn(params, rng, x)
+
+      l2_loss = 0.5 * sum(jnp.sum(jnp.square(p)) for p in jax.tree_leaves(params))
+      if with_wd:
+        return -obj.mean() + config.weight_decay * l2_loss
+      else:
+        return -obj
+
+    @jax.jit
+    def update(params, opt_state, rng, x):
+      loss, grad = jax.value_and_grad(loss_fn)(params, rng, x)
+
+      updates, opt_state = opt.update(grad, opt_state)
+      new_params = optax.apply_updates(params, updates)
+      return loss, new_params, opt_state
+
+    for epoch in range(config.num_epochs):
+      for x, _ in iter(ds):
+
+        x = x.reshape(x.shape[0], -1)
+        loss, params, opt_state = update(
+            params, opt_state, next(rng_seq), x)
+        
+        # print(params)
+
+        if iteration % config.log_interval == 0:
+          print(f"Itr {iteration}, Epoch {epoch}, Loss {loss}")
+          wandb.log({"loss/train": (np.array(loss)), ""})
+
+        
+          x_re = recons_fn(params, jax.random.PRNGKey(0), x)
+          x_sample = sample_fn(params, jax.random.PRNGKey(12))
+          print(f"Recons Error: {((x - x_re)**2).mean()}")
+          wandb.log({"recons_error": (np.array((x - x_re)**2).mean())})
+
+          make_grid(x, config.im_size, wandb_prefix="images/real")
+          make_grid(x_re, config.im_size, wandb_prefix="images/recons")
+          make_grid(x_sample, config.im_size, wandb_prefix="images/sample")
+          
+
+
+        iteration += 1
+
+      test_loss = 0.
+      n_seen = 0
+      for x, _ in iter(ds_test):
+        x = x.reshape(x.shape[0], -1)
+        loss = loss_fn(params, next(rng_seq), x, with_wd=False)
+        test_loss += loss.sum()
+        n_seen += loss.shape[0]
+      test_loss = test_loss / n_seen
+      wandb.log({"loss/test": (np.array(test_loss))})
+      print(f"Epoch {epoch}, Test loss {test_loss}")
+
+    cwd = os.getcwd()
+    config.unlock()
+    config.savedir = os.path.join(cwd, "saved_models", 
+                                  f"{config.alpha}_{config.n_bits}_{config.im_size}")
+    config.lock()
+
+    if not os.path.exists(config.savedir):
+      os.makedirs(config.savedir)
+    
+    if config.wandb.log_artifact:
+      artifact_name = f"{config.alpha}_{config.n_bits}_{config.im_size}"
+
+      artifact = wandb.Artifact(
+        artifact_name, 
+        type="nice_params",
+        metadata={
+          **{"alpha": config.alpha,
+            "n_bits": config.n_bits,
+            "im_size": config.im_size}
+        })
+    
+      # Save model
+      with artifact.new_file("params.pkl", "wb") as f:
+        pickle.dump(params, f)
       
-      # print(params)
-
-      if iteration % config.log_interval == 0:
-        print(f"Itr {iteration}, Epoch {epoch}, Loss {loss}")
-        # checkpoint.state.__getattr__("train").write(
-        #     {"itr": iteration,
-        #      "loss": jax.device_get(loss)})
-
-      # if iteration % config.save_interval == 0:
-      #   checkpoint.save()
-
-      iteration += 1
-
-    test_loss = 0.
-    n_seen = 0
-    for x, _ in iter(ds_test):
-      x = x.reshape(x.shape[0], -1)
-      loss = loss_fn(params, next(rng_seq), x, with_wd=False)
-      test_loss += loss.sum()
-      n_seen += loss.shape[0]
-    test_loss = test_loss / n_seen
-    print(f"Epoch {epoch}, Test loss {test_loss}")
-    # checkpoint.state.__getattr__("test").write({
-    #     "itr": iteration,
-    #     "loss": jax.device_get(test_loss)
-    # })
-
+      wandb.log_artifact(artifact)
 
 def load_dataset(
     split: str,
@@ -207,14 +238,15 @@ def load_dataset(
   return tfds.as_numpy(ds)
 
 
-def main(argv: Sequence[str]) -> None:
-  config = FLAGS.config
-  print("Displaying config %s", str(config))
-  if len(argv) > 1:
-    raise app.UsageError("Too many command-line arguments.")
-  run_experiment(config)
-
-
 if __name__ == "__main__":
-  print('test')
-  app.run(main)
+
+  os.environ["WANDB_API_KEY"] = "9835d6db89010f73306f92bb9a080c9751b25d28"
+  
+  jax.config.config_with_absl()
+
+  def _main(argv):
+    del argv
+    config = FLAGS.config
+    main(config)
+
+  app.run(_main)

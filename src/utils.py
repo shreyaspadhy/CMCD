@@ -7,6 +7,23 @@ import jax.numpy as jnp
 import ml_collections
 import wandb
 from chex import Array
+import numpy as np
+import matplotlib.pyplot as plt
+
+def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
+    x = np.array(x[:n].reshape(-1, im_size, im_size))
+
+    n_rows = int(np.sqrt(n))
+    fig, ax = plt.subplots(n_rows, n_rows, figsize=(8, 8))
+
+    # Plot each image
+    for i in range(n_rows):
+        for j in range(n_rows):
+            ax[i, j].imshow(x[i * n_rows + j], cmap='gray')
+            ax[i, j].axis('off')
+    
+    # Log into wandb
+    wandb.log({f"{wandb_prefix}": fig})
 
 
 # Taken from https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
