@@ -44,6 +44,8 @@ source ~/.bashrc
 # module load cudnn/7.6_cuda-10.2
 # conda activate jax
 module purge
+module load slurm
+module load rhel7/default-gpu
 module load cuda/11.8
 module load cudnn/8.9_cuda-11.8
 module load python-3.9.6-gcc-5.4.0-sbr552h
