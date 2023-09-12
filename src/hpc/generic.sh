@@ -45,10 +45,17 @@ source ~/.bashrc
 # conda activate jax
 module purge
 module load slurm
-module load rhel7/default-gpu
+module load openmpi-1.10.7-gcc-5.4.0-jdc7f4f
 module load cuda/11.8
+module load gcc-5.4.0-gcc-4.8.5-fis24gg
+module load singularity/current
+module load cmake/latest
 module load cudnn/8.9_cuda-11.8
+module load dot
+module load rhel7/global
+module load rhel7/default-gpu
 module load python-3.9.6-gcc-5.4.0-sbr552h
+module load turbovnc/2.0.1
 source ~/.virtualenvs/sampled_laplace/bin/activate
 
 #! Work directory (i.e. where the job will run):
