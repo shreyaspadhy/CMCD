@@ -39,7 +39,7 @@
 # module load rhel7/default-gpu              # REQUIRED - loads the basic environment
 
 # My custom modules
-# source ~/.bashrc
+source ~/.bashrc
 # module load cuda/10.2
 # module load cudnn/7.6_cuda-10.2
 # conda activate jax
