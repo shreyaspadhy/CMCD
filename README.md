@@ -1,8 +1,9 @@
 # CAIS
 
-To run ULA, 
+To run methods
 
-`python main.py -model log_ionosphere -boundmode MCD_ULA`
+
+`python main.py --config.model log_ionosphere --config.boundmode MCD_ULA`
 
 - ULA uses MCD_ULA
 - MCD uses MCD_ULA_sn

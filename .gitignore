@@ -2,3 +2,4 @@
 results/*
 */wandb/*
 src/wandb/*
+src/saved_models/*
