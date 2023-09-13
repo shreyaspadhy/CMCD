@@ -7,15 +7,19 @@ import numpyro.distributions as npdists
 import models.logistic_regression as model_lr
 import models.seeds as model_seeds
 import inference_gym.using_jax as gym
+import wandb
+import pickle
+import haiku as hk
+from nice import NICE
 
 
 models_gym = ['lorenz', 'brownian', 'banana']
 
-def load_model(model = 'log_sonar'):
+def load_model(model = 'log_sonar', config = None):
 	if model in models_gym:
 		return load_model_gym(model)
 	if 'nice' in model:
-		return load_model_nice(model)
+		return load_model_nice(model, config)
 	return load_model_other(model)
 
 
@@ -51,9 +55,37 @@ def load_model_other(model = 'log_sonar'):
 	return log_prob_model, dim
 
 
-def load_model_nice(model = 'size=14_nbits=3_alpha=0.5'):
-	pass
+def load_model_nice(model = 'nice', config = None):
+	artifact_name = f"{config.alpha}_{config.n_bits}_{config.im_size}"
 
+	api = wandb.Api()
+
+	artifact = api.artifact(f"shreyaspadhy/cais/{artifact_name}:latest")
+	loaded_params = pickle.load(open(artifact.file(), "rb"))
+
+	def forward_fn():
+		flow = NICE(config.im_size ** 2, h_dim=config.hidden_dim)
+
+		def _logpx(x):
+			return flow.logpx(x)
+		def _recons(x):
+			return flow.reverse(flow.forward(x))
+		def _sample():
+			return flow.sample(config.batch_size)
+		return _logpx, (_logpx, _recons, _sample)
+	
+	forward = hk.multi_transform(forward_fn)
+
+	logpx_fn, _, _ = forward.apply
+
+	logpx_fn_without_rng = lambda x: np.squeeze(logpx_fn(loaded_params, jax.random.PRNGKey(1), x[None, :]))
+
+	return logpx_fn_without_rng, config.im_size ** 2
+
+
+
+
+		
 
 
 

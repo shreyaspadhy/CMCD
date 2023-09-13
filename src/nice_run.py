@@ -215,28 +215,6 @@ def main(config):
       
       wandb.log_artifact(artifact)
 
-def load_dataset(
-    split: str,
-    batch_size: int,
-    im_size: int,
-    alpha: float,
-    n_bits: int
-):
-  """Loads the dataset as a generator of batches."""
-  ds, ds_info = tfds.load("mnist", split=split,
-                          as_supervised=True, with_info=True)
-  ds = ds.cache()
-  ds = ds.map(lambda x, y: resize(x, y, im_size=im_size),
-              num_parallel_calls=tf.data.AUTOTUNE)
-  ds = ds.map(lambda x, y: dequantize(x, y, n_bits=n_bits),
-              num_parallel_calls=tf.data.AUTOTUNE)
-  ds = ds.map(lambda x, y: logit(x, y, alpha=alpha),
-              num_parallel_calls=tf.data.AUTOTUNE)
-  ds = ds.shuffle(ds_info.splits["train"].num_examples)
-  ds = ds.batch(batch_size, drop_remainder=True)
-  ds = ds.prefetch(tf.data.AUTOTUNE)
-  return tfds.as_numpy(ds)
-
 
 if __name__ == "__main__":
 

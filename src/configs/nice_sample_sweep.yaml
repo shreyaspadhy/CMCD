@@ -1,0 +1,22 @@
+entity: shreyaspadhy
+project: cais
+program: main.py
+
+method: grid
+parameters:
+  model:
+    values: ['nice']
+  boundmode:
+    values: ['MCD_ULA', 'MCD_ULA_sn', 'UHA', 'MCD_U_a-lp-sn', 'MCD_CAIS_sn', 'MCD_CAIS_UHA_sn']
+  lr:
+    values: [1e-2, 1e-3, 1e-4]
+
+command:
+  - python
+  - ${program}
+  - --config
+  - configs/base.py
+  - --config.iters
+  - 15000
+  - --config.N
+  - 50

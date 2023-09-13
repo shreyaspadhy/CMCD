@@ -83,6 +83,7 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
 
 def sample(info, n_samples, n_input_dist_seeds, params_flat, unflatten, params_fixed, log_prob_model, loss_fn, rng_key_gen, log_prefix=''):
 	elbos, ln_zs = [], []
+	zs = []
 
 	eval_seeds = jax.random.randint(rng_key_gen, (n_samples * n_input_dist_seeds,), 1, 1e6)
 	for i in range(n_input_dist_seeds):
@@ -90,6 +91,9 @@ def sample(info, n_samples, n_input_dist_seeds, params_flat, unflatten, params_f
 
 		_, (loss_list, z) = loss_fn(seeds, params_flat, unflatten, params_fixed, log_prob_model)
 		
+		zs.append(z)
 		elbos.append([x.item() for x in loss_list])
 	
-	return elbos
+	zs = np.concatenate(zs, axis=0)
+	zs = jax.random.shuffle(jax.random.PRNGKey(123), zs, axis=0)
+	return elbos, zs

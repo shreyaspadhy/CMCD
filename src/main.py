@@ -13,7 +13,7 @@ import pickle
 import ml_collections.config_flags
 import wandb
 from absl import app, flags
-from utils import flatten_nested_dict, update_config_dict, setup_training
+from utils import flatten_nested_dict, update_config_dict, setup_training, make_grid
 from jax import scipy as jscipy
 from configs.base import LR_DICT
 
@@ -48,7 +48,11 @@ def main(config):
 		setup_training(run)
 		# Load in the correct LR from sweeps
 		try:
-			new_vals = {"lr": LR_DICT[config.model][config.boundmode]}
+			if "nice" not in config.model:
+				new_vals = {"lr": LR_DICT[config.model][config.boundmode]}
+			else:
+				config.model = config.model + f"_{config.alpha}_{config.n_bits}_{config.im_size}"
+				new_vals = {"lr": 0.0001}
 		except KeyError:
 			new_vals = {}
 			raise ValueError('LR not found for model %s and boundmode %s' % (config.model, config.boundmode))
@@ -57,7 +61,7 @@ def main(config):
 
 		print(config)
 		iters_base=config.iters
-		log_prob_model, dim = load_model(config.model)
+		log_prob_model, dim = load_model(config.model, config)
 		rng_key_gen = jax.random.PRNGKey(config.seed)
 
 		train_rng_key_gen, eval_rng_key_gen = jax.random.split(rng_key_gen)
@@ -67,7 +71,7 @@ def main(config):
 		params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=0, trainable=trainable)
 		grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
 		losses, diverged, params_flat, tracker = opt.run(
-			config, 0.01, iters_base, params_flat, unflatten, params_fixed,
+			config, 0.01, config.mfvi_iters, params_flat, unflatten, params_fixed,
 			log_prob_model, grad_and_loss, trainable, train_rng_key_gen, log_prefix='pretrain')
 		vdparams_init = unflatten(params_flat)[0]['vd']
 
@@ -101,7 +105,7 @@ def main(config):
 		n_samples = config.n_samples
 		n_input_dist_seeds = config.n_input_dist_seeds
 
-		eval_losses = opt.sample(
+		eval_losses, samples = opt.sample(
 			config, n_samples, n_input_dist_seeds, params_flat, unflatten, params_fixed, log_prob_model, loss_fn,
 			eval_rng_key_gen, log_prefix='eval')
 
@@ -130,9 +134,31 @@ def main(config):
 			'elbo_final_std': onp.array(final_elbo_std),
 			'final_ln_Z_std': onp.array(final_ln_Z_std)
 			})
+		
+		# Plot samples
+		if "nice" in config.model:
+			make_grid(samples, config.im_size, n=64, wandb_prefix="images/sample")
 
 		params_train, params_notrain = unflatten(params_flat)
 		params = {**params_train, **params_notrain}
+
+		if config.wandb.log_artifact:
+			artifact_name = f"{config.model}_{config.boundmode}_{config.nbridges}"
+
+			artifact = wandb.Artifact(
+				artifact_name, 
+				type="nice_params",
+				metadata={
+				**{"alpha": config.alpha,
+					"n_bits": config.n_bits,
+					"im_size": config.im_size}
+				})
+			
+			# Save model
+			with artifact.new_file("params.pkl", "wb") as f:
+				pickle.dump(params, f)
+			
+			wandb.log_artifact(artifact)
 
 
 if __name__ == "__main__":
