@@ -47,7 +47,7 @@ def get_config():
     config.boundmode = "UHA"
     config.model = "log_sonar"
     config.N = 50 # 5 for all except NICE
-    config.nbridges = 8
+    config.nbridges = 64
     config.lfsteps = 1
 
     config.mfvi_iters = 150000

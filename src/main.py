@@ -52,7 +52,7 @@ def main(config):
 				new_vals = {"lr": LR_DICT[config.model][config.boundmode]}
 			else:
 				config.model = config.model + f"_{config.alpha}_{config.n_bits}_{config.im_size}"
-				new_vals = {"lr": 0.0001}
+				new_vals = {}
 		except KeyError:
 			new_vals = {}
 			raise ValueError('LR not found for model %s and boundmode %s' % (config.model, config.boundmode))
