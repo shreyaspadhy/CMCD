@@ -10,6 +10,9 @@ from chex import Array
 import numpy as np
 import matplotlib.pyplot as plt
 
+import ot
+
+
 def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
     x = np.array(x[:n].reshape(-1, im_size, im_size))
 
@@ -24,6 +27,7 @@ def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
     
     # Log into wandb
     wandb.log({f"{wandb_prefix}": fig})
+    plt.close()
 
 
 # Taken from https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
@@ -73,3 +77,18 @@ def setup_training(wandb_run):
         print(jax.device_count(), jax.local_device_count())
         print("8 cores of TPU ( Local devices in Jax ):")
         print("\n".join(map(str, jax.local_devices())))
+
+
+
+def W2_distance(x: Array, y: Array):
+
+    # x, y is [n_samples, dim], [n_samples, dim]
+    n_samples, dim = x.shape
+
+    x, y = np.array(x), np.array(y)
+    a, b = np.ones((n_samples,)), np.ones((n_samples,))
+    a, b = a / np.sum(a), b / np.sum(b)
+
+    W2 = np.sqrt(ot.emd2(a, b, ot.dist(x, y)))
+
+    return W2

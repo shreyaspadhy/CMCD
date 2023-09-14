@@ -13,7 +13,7 @@ import pickle
 import ml_collections.config_flags
 import wandb
 from absl import app, flags
-from utils import flatten_nested_dict, update_config_dict, setup_training, make_grid
+from utils import flatten_nested_dict, update_config_dict, setup_training, make_grid, W2_distance
 from jax import scipy as jscipy
 from configs.base import LR_DICT
 
@@ -61,7 +61,7 @@ def main(config):
 
 		print(config)
 		iters_base=config.iters
-		log_prob_model, dim = load_model(config.model, config)
+		log_prob_model, dim, sample_from_target_fn = load_model(config.model, config)
 		rng_key_gen = jax.random.PRNGKey(config.seed)
 
 		train_rng_key_gen, eval_rng_key_gen = jax.random.split(rng_key_gen)
@@ -69,27 +69,44 @@ def main(config):
 		# Train initial variational distribution to maximize the ELBO
 		trainable=('vd',)
 		params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=0, trainable=trainable)
-		grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
-		losses, diverged, params_flat, tracker = opt.run(
-			config, 0.01, config.mfvi_iters, params_flat, unflatten, params_fixed,
-			log_prob_model, grad_and_loss, trainable, train_rng_key_gen, log_prefix='pretrain')
-		vdparams_init = unflatten(params_flat)[0]['vd']
 
-		elbo_init = -np.mean(np.array(losses[-500:]))
-		print('Done training initial parameters, got ELBO %.2f.' % elbo_init)
-		wandb.log({'elbo_init': onp.array(elbo_init)})
+		
+		grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
+		if not config.pretrain_mfvi:
+			mfvi_iters = 1
+			vdparams_init = unflatten(params_flat)[0]['vd']
+		else:
+			mfvi_iters = config.mfvi_iters
+			losses, diverged, params_flat, tracker = opt.run(
+				config, 0.01, mfvi_iters, params_flat, unflatten, params_fixed,
+				log_prob_model, grad_and_loss, trainable, train_rng_key_gen, log_prefix='pretrain')
+			vdparams_init = unflatten(params_flat)[0]['vd']
+
+			elbo_init = -np.mean(np.array(losses[-500:]))
+			print('Done training initial parameters, got ELBO %.2f.' % elbo_init)
+			wandb.log({'elbo_init': onp.array(elbo_init)})
 
 		if config.boundmode == 'UHA':
-			trainable = ('vd', 'eps', 'eta', 'mgridref_y')
-			params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=config.nbridges, eta=0.0, eps = 0.00001,
+			trainable = ('eta', 'mgridref_y')
+			if config.train_eps:
+				trainable = trainable + ('eps',)
+			if config.train_vi:
+				trainable = trainable + ('vd',)
+			params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=config.nbridges, eta=config.init_eta, eps = config.init_eps,
 				lfsteps=config.lfsteps, vdparams=vdparams_init, trainable=trainable)
 			grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
 
 			loss_fn = jax.jit(bm.compute_bound, static_argnums = (2, 3, 4))
 
 		elif 'MCD' in config.boundmode:
-			trainable = ('vd', 'eps', 'eta', 'gamma', 'mgridref_y')
-			params_flat, unflatten, params_fixed = mcdbm.initialize(dim=dim, nbridges=config.nbridges, vdparams=vdparams_init, eta=0.0, eps = 0.00001,
+			trainable = ('eta', 'gamma', 'mgridref_y')
+			if config.train_eps:
+				trainable = trainable + ('eps',)
+			if config.train_vi:
+				trainable = trainable + ('vd',)
+			
+			print(trainable)
+			params_flat, unflatten, params_fixed = mcdbm.initialize(dim=dim, nbridges=config.nbridges, vdparams=vdparams_init, eta=config.init_eta, eps = config.init_eps,
 				trainable=trainable, mode=config.boundmode)
 			grad_and_loss = jax.jit(jax.grad(mcdbm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
 
@@ -98,12 +115,15 @@ def main(config):
 		else:
 			raise NotImplementedError('Mode %s not implemented.' % config.boundmode)
 
-		losses, diverged, params_flat, tracker = opt.run(config, config.lr, config.iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss,
-			trainable, train_rng_key_gen, log_prefix='train')
-
 		# Average over 30 seeds, 500 samples each after training is done.
 		n_samples = config.n_samples
 		n_input_dist_seeds = config.n_input_dist_seeds
+
+		target_samples = sample_from_target_fn(jax.random.PRNGKey(1), n_samples * n_input_dist_seeds)
+
+		losses, diverged, params_flat, tracker = opt.run(config, config.lr, config.iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss,
+			trainable, train_rng_key_gen, log_prefix='train', target_samples=target_samples)
+
 
 		eval_losses, samples = opt.sample(
 			config, n_samples, n_input_dist_seeds, params_flat, unflatten, params_fixed, log_prob_model, loss_fn,
@@ -137,7 +157,23 @@ def main(config):
 		
 		# Plot samples
 		if "nice" in config.model:
+			other_target_samples = sample_from_target_fn(jax.random.PRNGKey(2), samples.shape[0])
+
+			w2_dists, self_w2_dists = [], []
+			for i in range(n_input_dist_seeds):
+				
+				samples_i = samples[i * n_samples : (i + 1) * n_samples]
+				target_samples_i = target_samples[i * n_samples : (i + 1) * n_samples]
+				other_target_samples_i = other_target_samples[i * n_samples : (i + 1) * n_samples]
+				w2_dists.append(W2_distance(samples_i, target_samples_i))
+				self_w2_dists.append(W2_distance(target_samples_i, other_target_samples_i))
+
 			make_grid(samples, config.im_size, n=64, wandb_prefix="images/sample")
+			
+			wandb.log({"w2_dist": onp.mean(onp.array(w2_dists)),
+			  			"w2_dist_std": onp.std(onp.array(w2_dists)),
+						"self_w2_dist": onp.mean(onp.array(self_w2_dists)),	
+						"self_w2_dist_std": onp.std(onp.array(self_w2_dists))})
 
 		params_train, params_notrain = unflatten(params_flat)
 		params = {**params_train, **params_notrain}

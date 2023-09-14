@@ -46,9 +46,16 @@ def get_config():
     config = ml_collections.ConfigDict()
     config.boundmode = "UHA"
     config.model = "nice"
-    config.N = 50 # 5 for all except NICE
-    config.nbridges = 64
+    config.N = 64 # 5 for all except NICE
+    config.nbridges = 256
     config.lfsteps = 1
+
+    config.init_eta = 0.0
+    config.init_eps = 1e-5
+    config.pretrain_mfvi = False
+
+    config.train_vi = True
+    config.train_eps = True
 
     config.mfvi_iters = 15000
     config.iters = 15000 # 150000 for all except NICE

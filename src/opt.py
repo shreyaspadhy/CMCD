@@ -1,10 +1,12 @@
 import jax.numpy as np
+import numpy as onp
 import jax
 from jax.flatten_util import ravel_pytree
 from tqdm import tqdm
 import sys
 import functools
 import wandb
+from utils import make_grid, W2_distance
 
 def adam(step_size, b1 = 0.9, b2 = 0.999, eps = 1e-8):
 	# Basically JAX's thing with added projection for some parameters.
@@ -43,7 +45,9 @@ def adam(step_size, b1 = 0.9, b2 = 0.999, eps = 1e-8):
 def collect_eps(params_flat, unflatten, trainable):
 	if 'eps' in trainable:
 		return unflatten(params_flat)[0]['eps']
-	return 0.
+	else:
+		return unflatten(params_flat)[1]['eps']
+	# return 0.
 
 @functools.partial(jax.jit, static_argnums = (1, 2))
 def collect_gamma(params_flat, unflatten, trainable):
@@ -51,7 +55,8 @@ def collect_gamma(params_flat, unflatten, trainable):
 		return unflatten(params_flat)[0]['gamma']
 	return 0.
 
-def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss, trainable, rng_key_gen, extra=True, log_prefix=''):
+def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss, trainable, rng_key_gen, 
+		extra=True, log_prefix='', target_samples=None):
 	# try:
 	opt_init, update, get_params = adam(lr)
 	update = jax.jit(update, static_argnums = (3, 4))
@@ -66,7 +71,18 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
 		if info.run_cluster == 0:
 			tracker['eps'].append(collect_eps(params_flat, unflatten, trainable))
 			tracker['gamma'].append(collect_gamma(params_flat, unflatten, trainable))
-		grad, (loss, _) = grad_and_loss(seeds, params_flat, unflatten, params_fixed, log_prob_model)
+
+			wandb.log({f'{log_prefix}/eps': onp.array(tracker['eps'][-1])})
+			wandb.log({f'{log_prefix}/gamma': onp.array(tracker['gamma'][-1])})
+		
+		grad, (loss, z) = grad_and_loss(seeds, params_flat, unflatten, params_fixed, log_prob_model)
+
+		if "pretrain" not in log_prefix:
+			make_grid(z, info.im_size, n=64, wandb_prefix=f'{log_prefix}/images')
+			if target_samples is not None:
+				make_grid(target_samples, info.im_size, n=64, wandb_prefix=f'{log_prefix}/target')
+				wandb.log({f'{log_prefix}/w2': W2_distance(z, target_samples[:z.shape[0], ...])})
+
 		losses.append(np.mean(loss).item())
 		wandb.log({f'{log_prefix}/loss': np.mean(loss).item()})
 		if np.isnan(np.mean(loss)):
@@ -95,5 +111,5 @@ def sample(info, n_samples, n_input_dist_seeds, params_flat, unflatten, params_f
 		elbos.append([x.item() for x in loss_list])
 	
 	zs = np.concatenate(zs, axis=0)
-	zs = jax.random.shuffle(jax.random.PRNGKey(123), zs, axis=0)
+
 	return elbos, zs

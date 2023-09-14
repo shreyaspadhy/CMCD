@@ -70,17 +70,20 @@ def load_model_nice(model = 'nice', config = None):
 			return flow.logpx(x)
 		def _recons(x):
 			return flow.reverse(flow.forward(x))
-		def _sample():
-			return flow.sample(config.batch_size)
+		def _sample(n):
+			return flow.sample(n)
 		return _logpx, (_logpx, _recons, _sample)
 	
 	forward = hk.multi_transform(forward_fn)
 
-	logpx_fn, _, _ = forward.apply
+	logpx_fn, _, sample_fn = forward.apply
 
 	logpx_fn_without_rng = lambda x: np.squeeze(logpx_fn(loaded_params, jax.random.PRNGKey(1), x[None, :]))
 
-	return logpx_fn_without_rng, config.im_size ** 2
+	sample_fn_clean = lambda rng, n: sample_fn(loaded_params, rng, n)
+
+
+	return logpx_fn_without_rng, config.im_size ** 2, sample_fn_clean
 
 
 
