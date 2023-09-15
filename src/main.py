@@ -48,11 +48,13 @@ def main(config):
 		setup_training(run)
 		# Load in the correct LR from sweeps
 		try:
-			if "nice" not in config.model:
-				new_vals = {"lr": LR_DICT[config.model][config.boundmode]}
-			else:
+			if config.model == "nice":
 				config.model = config.model + f"_{config.alpha}_{config.n_bits}_{config.im_size}"
 				new_vals = {}
+			elif config.model == "funnel":
+				new_vals = {}
+			else:
+				new_vals = {"lr": LR_DICT[config.model][config.boundmode]}
 		except KeyError:
 			new_vals = {}
 			raise ValueError('LR not found for model %s and boundmode %s' % (config.model, config.boundmode))
@@ -78,7 +80,7 @@ def main(config):
 		else:
 			mfvi_iters = config.mfvi_iters
 			losses, diverged, params_flat, tracker = opt.run(
-				config, 0.01, mfvi_iters, params_flat, unflatten, params_fixed,
+				config, config.mfvi_lr, mfvi_iters, params_flat, unflatten, params_fixed,
 				log_prob_model, grad_and_loss, trainable, train_rng_key_gen, log_prefix='pretrain')
 			vdparams_init = unflatten(params_flat)[0]['vd']
 
@@ -156,7 +158,7 @@ def main(config):
 			})
 		
 		# Plot samples
-		if "nice" in config.model:
+		if config.model in ["nice", "funnel"]:
 			other_target_samples = sample_from_target_fn(jax.random.PRNGKey(2), samples.shape[0])
 
 			w2_dists, self_w2_dists = [], []
@@ -168,7 +170,8 @@ def main(config):
 				w2_dists.append(W2_distance(samples_i, target_samples_i))
 				self_w2_dists.append(W2_distance(target_samples_i, other_target_samples_i))
 
-			make_grid(samples, config.im_size, n=64, wandb_prefix="images/sample")
+			if config.model == "nice":
+				make_grid(samples, config.im_size, n=64, wandb_prefix="images/sample")
 			
 			wandb.log({"w2_dist": onp.mean(onp.array(w2_dists)),
 			  			"w2_dist_std": onp.std(onp.array(w2_dists)),

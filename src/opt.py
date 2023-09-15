@@ -78,9 +78,11 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
 		grad, (loss, z) = grad_and_loss(seeds, params_flat, unflatten, params_fixed, log_prob_model)
 
 		if "pretrain" not in log_prefix:
-			make_grid(z, info.im_size, n=64, wandb_prefix=f'{log_prefix}/images')
+			if info.model == "nice":
+				make_grid(z, info.im_size, n=64, wandb_prefix=f'{log_prefix}/images')
 			if target_samples is not None:
-				make_grid(target_samples, info.im_size, n=64, wandb_prefix=f'{log_prefix}/target')
+				if info.model == "nice":
+					make_grid(target_samples, info.im_size, n=64, wandb_prefix=f'{log_prefix}/target')
 				wandb.log({f'{log_prefix}/w2': W2_distance(z, target_samples[:z.shape[0], ...])})
 
 		losses.append(np.mean(loss).item())

@@ -1,5 +1,6 @@
 from jax import grad, vmap
 import jax.numpy as np
+import jax.random as jr
 import jax
 import numpyro
 from jax.flatten_util import ravel_pytree
@@ -12,6 +13,9 @@ import pickle
 import haiku as hk
 from nice import NICE
 
+from jax.scipy.special import logsumexp
+from jax.scipy.stats import multivariate_normal
+from jax.scipy.stats import norm
 
 models_gym = ['lorenz', 'brownian', 'banana']
 
@@ -20,6 +24,8 @@ def load_model(model = 'log_sonar', config = None):
 		return load_model_gym(model)
 	if 'nice' in model:
 		return load_model_nice(model, config)
+	if 'funnel' in model:
+		return load_model_funnel(model, config)
 	return load_model_other(model)
 
 
@@ -86,9 +92,39 @@ def load_model_nice(model = 'nice', config = None):
 	return logpx_fn_without_rng, config.im_size ** 2, sample_fn_clean
 
 
+def load_model_funnel(model = 'funnel', config = None):
 
+	d=config.funnel_d
+	sig=config.funnel_sig
+	clip_y=config.funnel_clipy
 
-		
+	def neg_energy(x):
+		def unbatched(x):
+			v = x[0]
+			log_density_v = norm.logpdf(v,
+										loc=0.,
+										scale=3.)
+			variance_other = np.exp(v)
+			other_dim = d - 1
+			cov_other = np.eye(other_dim) * variance_other
+			mean_other = np.zeros(other_dim)
+			log_density_other = multivariate_normal.logpdf(x[1:],
+															mean=mean_other,
+															cov=cov_other)
+			return log_density_v + log_density_other
+		output = np.squeeze(jax.vmap(unbatched)(x[None, :]))
+		return output
+
+	def sample_data(rng, n_samples):
+		# sample from Nd funnel distribution
+
+		y_rng, x_rng = jr.split(rng)
+
+		y = (sig * jr.normal(y_rng, (n_samples, 1))).clip(-clip_y, clip_y)
+		x = jr.normal(x_rng, (n_samples, d - 1)) * np.exp(-y / 2)
+		return np.concatenate((y, x), axis=1)
+	
+	return neg_energy, d, sample_data
 
 
 
