@@ -88,7 +88,6 @@ def load_model_nice(model = 'nice', config = None):
 
 	sample_fn_clean = lambda rng, n: sample_fn(loaded_params, rng, n)
 
-
 	return logpx_fn_without_rng, config.im_size ** 2, sample_fn_clean
 
 
