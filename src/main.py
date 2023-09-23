@@ -26,6 +26,7 @@ ml_collections.config_flags.DEFINE_config_file(
 )
 FLAGS = flags.FLAGS
 
+# python main.py --config.model funnel --config.boundmode MCD_ULA
 
 # Boundmodes
 # 	- ULA uses MCD_ULA
@@ -48,20 +49,27 @@ def main(config):
 		setup_training(run)
 		# Load in the correct LR from sweeps
 		try:
-			if "nice" not in config.model:
-				new_vals = {"lr": LR_DICT[config.model][config.boundmode]}
-			else:
-				config.model = config.model + f"_{config.alpha}_{config.n_bits}_{config.im_size}"
+			if config.model == "nice":
+				config.model = run.config.model + f"_{run.config.alpha}_{run.config.n_bits}_{run.config.im_size}"
 				new_vals = {}
+			elif config.model == "funnel":
+				new_vals = {}
+			else:
+				new_vals = {"lr": LR_DICT[run.config.model][run.config.boundmode]}
+				print(new_vals)
 		except KeyError:
 			new_vals = {}
-			raise ValueError('LR not found for model %s and boundmode %s' % (config.model, config.boundmode))
+			raise ValueError('LR not found for model %s and boundmode %s' % (run.config.model, run.config.boundmode))
 		
 		update_config_dict(config, run, new_vals)
 
 		print(config)
-		iters_base=config.iters
-		log_prob_model, dim, sample_from_target_fn = load_model(config.model, config)
+
+		if config.model in ['nice', 'funnel']:
+			log_prob_model, dim, sample_from_target_fn = load_model(config.model, config)
+		else:
+			log_prob_model, dim = load_model(config.model, config)
+			sample_from_target_fn = None
 		rng_key_gen = jax.random.PRNGKey(config.seed)
 
 		train_rng_key_gen, eval_rng_key_gen = jax.random.split(rng_key_gen)
@@ -77,8 +85,8 @@ def main(config):
 			vdparams_init = unflatten(params_flat)[0]['vd']
 		else:
 			mfvi_iters = config.mfvi_iters
-			losses, diverged, params_flat, tracker = opt.run(
-				config, 0.01, mfvi_iters, params_flat, unflatten, params_fixed,
+			losses, _, params_flat, _ = opt.run(
+				config, config.mfvi_lr, mfvi_iters, params_flat, unflatten, params_fixed,
 				log_prob_model, grad_and_loss, trainable, train_rng_key_gen, log_prefix='pretrain')
 			vdparams_init = unflatten(params_flat)[0]['vd']
 
@@ -119,7 +127,10 @@ def main(config):
 		n_samples = config.n_samples
 		n_input_dist_seeds = config.n_input_dist_seeds
 
-		target_samples = sample_from_target_fn(jax.random.PRNGKey(1), n_samples * n_input_dist_seeds)
+		if sample_from_target_fn is not None:
+			target_samples = sample_from_target_fn(jax.random.PRNGKey(1), n_samples * n_input_dist_seeds)
+		else:
+			target_samples = None
 
 		losses, diverged, params_flat, tracker = opt.run(config, config.lr, config.iters, params_flat, unflatten, params_fixed, log_prob_model, grad_and_loss,
 			trainable, train_rng_key_gen, log_prefix='train', target_samples=target_samples)
@@ -156,19 +167,20 @@ def main(config):
 			})
 		
 		# Plot samples
-		if "nice" in config.model:
+		if config.model in ["nice", "funnel"]:
 			other_target_samples = sample_from_target_fn(jax.random.PRNGKey(2), samples.shape[0])
 
 			w2_dists, self_w2_dists = [], []
 			for i in range(n_input_dist_seeds):
 				
-				samples_i = samples[i * n_samples : (i + 1) * n_samples]
-				target_samples_i = target_samples[i * n_samples : (i + 1) * n_samples]
-				other_target_samples_i = other_target_samples[i * n_samples : (i + 1) * n_samples]
+				samples_i = samples[i * n_samples : (i + 1) * n_samples, ...]
+				target_samples_i = target_samples[i * n_samples : (i + 1) * n_samples, ...]
+				other_target_samples_i = other_target_samples[i * n_samples : (i + 1) * n_samples, ...]
 				w2_dists.append(W2_distance(samples_i, target_samples_i))
 				self_w2_dists.append(W2_distance(target_samples_i, other_target_samples_i))
 
-			make_grid(samples, config.im_size, n=64, wandb_prefix="images/sample")
+			if config.model == "nice":
+				make_grid(samples, config.im_size, n=64, wandb_prefix="images/sample")
 			
 			wandb.log({"w2_dist": onp.mean(onp.array(w2_dists)),
 			  			"w2_dist_std": onp.std(onp.array(w2_dists)),

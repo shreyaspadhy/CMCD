@@ -45,21 +45,22 @@ LR_DICT = {
 def get_config():
     config = ml_collections.ConfigDict()
     config.boundmode = "UHA"
-    config.model = "nice"
-    config.N = 64 # 5 for all except NICE
-    config.nbridges = 256
+    config.model = "lorenz"
+    config.N = 5 # 5 for all except NICE
+    config.nbridges = 8
     config.lfsteps = 1
 
     config.init_eta = 0.0
     config.init_eps = 1e-5
-    config.pretrain_mfvi = False
+    config.pretrain_mfvi = True
 
     config.train_vi = True
     config.train_eps = True
 
-    config.mfvi_iters = 15000
-    config.iters = 15000 # 150000 for all except NICE
-    config.lr = 0.001
+    config.mfvi_iters = 150000
+    config.mfvi_lr = 0.01
+    config.iters = 150000 # 150000 for all except NICE
+    config.lr = 0.0001
     config.seed = 1
     config.id = -1
     config.run_cluster = 0
@@ -71,6 +72,12 @@ def get_config():
     config.alpha = 0.05
     config.n_bits = 3
     config.hidden_dim = 1000
+
+    # Funnel configs
+    config.funnel_d = 10
+    config.funnel_sig = 3
+    config.funnel_clipy = 11
+    
 
     cwd = os.getcwd()
 
