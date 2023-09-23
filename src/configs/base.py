@@ -77,6 +77,10 @@ def get_config():
     config.funnel_d = 10
     config.funnel_sig = 3
     config.funnel_clipy = 11
+
+    # LGCP configs
+    config.use_whitened = False
+    config.file_path = "/home/sp2058/CAIS/pines.csv"
     
 
     cwd = os.getcwd()
