@@ -39,6 +39,12 @@ LR_DICT = {
             "UHA": 1e-3,
             "MCD_ULA_sn": 1e-3,
             "MCD_ULA": 1e-4},
+    "lgcp": {"MCD_CAIS_UHA_sn": 1e-3,
+            "MCD_CAIS_sn": 1e-4,
+            "MCD_U_a-lp-sn": 1e-3,
+            "UHA": 1e-4,
+            "MCD_ULA_sn": 1e-4,
+            "MCD_ULA": 1e-4},
 }
 
 
