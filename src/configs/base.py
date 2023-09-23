@@ -45,7 +45,7 @@ LR_DICT = {
 def get_config():
     config = ml_collections.ConfigDict()
     config.boundmode = "UHA"
-    config.model = "nice"
+    config.model = "lorenz"
     config.N = 5 # 5 for all except NICE
     config.nbridges = 8
     config.lfsteps = 1
@@ -57,8 +57,8 @@ def get_config():
     config.train_vi = True
     config.train_eps = True
 
-    config.mfvi_iters = 15000
-    config.mfvi_lr = 0.0001
+    config.mfvi_iters = 150000
+    config.mfvi_lr = 0.01
     config.iters = 150000 # 150000 for all except NICE
     config.lr = 0.0001
     config.seed = 1
