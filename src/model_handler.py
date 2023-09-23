@@ -144,8 +144,6 @@ def load_model_lgcp(model = 'lgcp', config = None):
 	return lgcp.evaluate_log_density, lgcp._num_latents
 
 
-
-
 class LogGaussianCoxPines(LogDensity):
   """Log Gaussian Cox process posterior in 2D for pine saplings data.
 

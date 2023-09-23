@@ -80,10 +80,11 @@ def get_config():
 
     # LGCP configs
     config.use_whitened = False
-    config.file_path = "/home/sp2058/CAIS/pines.csv"
+    
     
 
     cwd = os.getcwd()
+    config.file_path = os.path.join(cwd, "../pines.csv")
 
     # Wandb Configs
     config.wandb = ml_collections.ConfigDict()
