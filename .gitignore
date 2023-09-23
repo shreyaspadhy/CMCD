@@ -3,3 +3,6 @@ results/*
 */wandb/*
 src/wandb/*
 src/saved_models/*
+logs/*
+wandb/*
+src/logs/*
