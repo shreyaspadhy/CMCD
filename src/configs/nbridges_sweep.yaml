@@ -5,12 +5,12 @@ program: main.py
 method: grid
 parameters:
   boundmode:
-    values: ['MCD_ULA', 'MCD_ULA_sn', 'UHA', 'MCD_U_a-lp-sn', 'MCD_CAIS_sn', 'MCD_CAIS_UHA_sn']
+    values: ['MCD_ULA', 'MCD_ULA_sn', 'MCD_CAIS_sn']
   model:
     # values: ['log_sonar', 'log_ionosphere', 'lorenz', 'brownian', 'banana', 'seeds']
     values: ['lorenz']
   nbridges:
-    values: [256, 128, 64, 32, 16, 8]
+    values: [256, 128, 64, 32, 16]
 
 command:
   - python

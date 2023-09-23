@@ -60,7 +60,7 @@ def main(config):
 		except KeyError:
 			new_vals = {}
 			raise ValueError('LR not found for model %s and boundmode %s' % (run.config.model, run.config.boundmode))
-		
+		# new_vals = {}
 		update_config_dict(config, run, new_vals)
 
 		print(config)
