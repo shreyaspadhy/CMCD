@@ -9,7 +9,7 @@ import wandb
 from chex import Array
 import numpy as np
 import matplotlib.pyplot as plt
-# import ot
+import ot
 
 def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
     x = np.array(x[:n].reshape(-1, im_size, im_size))
