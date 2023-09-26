@@ -14,9 +14,9 @@ def to_scale(logdiag):
 	return np.exp(logdiag)
 	# return (logdiag + np.sqrt(4. + logdiag * logdiag)) / 2.
 
-def initialize(dim):
+def initialize(dim, init_sigma=1.):
 	mean = np.zeros(dim)
-	logdiag = np.zeros(dim)
+	logdiag = np.ones(dim) * np.log(init_sigma)
 	return encode_params(mean, logdiag)
 
 def build(params):

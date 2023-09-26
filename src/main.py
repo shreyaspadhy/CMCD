@@ -76,7 +76,7 @@ def main(config):
 
 		# Train initial variational distribution to maximize the ELBO
 		trainable=('vd',)
-		params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=0, trainable=trainable)
+		params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=0, trainable=trainable, init_sigma=config.init_sigma)
 
 		
 		grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))

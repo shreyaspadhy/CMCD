@@ -9,18 +9,18 @@ import ais_utils
 
 
 def initialize(dim, vdparams=None, nbridges=0, lfsteps=1, eps=0.0, eta=0.5, mdparams=None,
-	ngridb=32, mgridref_y=None, trainable = ['eps', 'eta']):
+	ngridb=32, mgridref_y=None, trainable = ['eps', 'eta'], init_sigma=1.):
 	params_train = {} # Has all trainable parameters
 	params_notrain = {} # Non trainable parameters
 
 	if 'vd' in trainable:
 		params_train['vd'] = vdparams
 		if vdparams is None:
-			params_train['vd'] = vd.initialize(dim)
+			params_train['vd'] = vd.initialize(dim, init_sigma=init_sigma)
 	else:
 		params_notrain['vd'] = vdparams
 		if vdparams is None:
-			params_notrain['vd'] = vd.initialize(dim)
+			params_notrain['vd'] = vd.initialize(dim, init_sigma=init_sigma)
 
 	if 'eps' in trainable:
 		params_train['eps'] = eps
