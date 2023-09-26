@@ -79,21 +79,6 @@ def setup_training(wandb_run):
         print("\n".join(map(str, jax.local_devices())))
 
 
-
-# def W2_distance(x: Array, y: Array):
-
-#     # x, y is [n_samples, dim], [n_samples, dim]
-#     n_samples, dim = x.shape
-
-#     x, y = np.array(x).reshape((n_samples, dim)), np.array(y).reshape((n_samples, dim))
-
-#     # W2 = ot.sinkhorn2(a, b, M, reg=0.001)
-#     W2, _, _ = sinkhorn(torch.tensor(x), torch.tensor(y))
-
-#     # print(f'W2 : ', W2.shape)
-
-#     return W2
-
 def W2_distance(x, y, reg = 0.01):
     N = x.shape[0]
     x, y = np.array(x), np.array(y)

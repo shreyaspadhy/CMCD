@@ -5,7 +5,7 @@ program: main.py
 method: grid
 parameters:
   boundmode:
-    values: ['MCD_CAIS_sn', 'MCD_CAIS_UHA_sn']
+    values: ['MCD_CAIS_sn']
   model:
     # values: ['log_sonar', 'log_ionosphere', 'lorenz', 'brownian', 'banana', 'seeds']
     values: ['funnel']
@@ -19,12 +19,10 @@ parameters:
     values: [False]
   train_eps:
     values: [False]
-  init_eps:
-    values: [1e-4, 1e-3, 1e-2, 1e-1, 3e-1, 5e-1, 1]
-  lr:
-    values: [5e-2, 1e-2, 5e-3, 1e-3]
   emb_dim:
     values: [48]
+  n_samples:
+    values: [2000]
   
 
 command:

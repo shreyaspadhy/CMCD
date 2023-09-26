@@ -15,7 +15,7 @@ import wandb
 from absl import app, flags
 from utils import flatten_nested_dict, update_config_dict, setup_training, make_grid, W2_distance
 from jax import scipy as jscipy
-from configs.base import LR_DICT
+from configs.base import LR_DICT, FUNNEL_EPS_DICT
 
 
 ml_collections.config_flags.DEFINE_config_file(
@@ -53,7 +53,8 @@ def main(config):
 				config.model = run.config.model + f"_{run.config.alpha}_{run.config.n_bits}_{run.config.im_size}"
 				new_vals = {}
 			elif run.config.model in ["funnel"]:
-				new_vals = {}
+				values = FUNNEL_EPS_DICT[run.config.nbridges]
+				new_vals = {"init_eps": values["init_eps"], "lr": values["lr"]}
 			else:
 				new_vals = {"lr": LR_DICT[run.config.model][run.config.boundmode]}
 				print(new_vals)

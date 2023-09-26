@@ -47,6 +47,14 @@ LR_DICT = {
             "MCD_ULA": 1e-4},
 }
 
+FUNNEL_EPS_DICT = {
+    8: {"init_eps": 0.1, "lr": 0.01},
+    16: {"init_eps": 0.1, "lr": 0.01},
+    32: {"init_eps": 0.1, "lr": 0.005},
+    64: {"init_eps": 0.1, "lr": 0.001},
+    128: {"init_eps": 0.01, "lr": 0.01},
+    256: {"init_eps": 0.01, "lr": 0.005},
+}
 
 def get_config():
     config = ml_collections.ConfigDict()
