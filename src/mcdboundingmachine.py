@@ -10,7 +10,7 @@ from nn import initialize_mcd_network
 
 
 def initialize(dim, vdparams=None, nbridges=0, eps=0.01, gamma = 10., eta = 0.5, ngridb=32, mgridref_y=None, trainable = ['eps'], use_score_nn=True,
-	emb_dim=48, seed=1, mode="MCD_U_lp-e"):
+	emb_dim=48, nlayers=3, seed=1, mode="MCD_U_lp-e"):
 	"""
 	Modes allowed:
 		- MCD_ULA: This is ULA. Method from Thin et al.
@@ -48,10 +48,10 @@ def initialize(dim, vdparams=None, nbridges=0, eps=0.01, gamma = 10., eta = 0.5,
 		params_notrain['eta'] = eta
 
 	if mode in ["MCD_ULA_sn", "MCD_U_e-lp-sna", "MCD_U_a-lp-sna", "MCD_CAIS_sn"]:
-		init_fun_sn, apply_fun_sn = initialize_mcd_network(dim, emb_dim, nbridges, nlayers=3)
+		init_fun_sn, apply_fun_sn = initialize_mcd_network(dim, emb_dim, nbridges, nlayers=nlayers)
 		params_train['sn'] = init_fun_sn(jax.random.PRNGKey(seed), None)[1]
 	elif mode in ["MCD_U_a-lp-sn", "MCD_U_ea-lp-sn", "MCD_U_a-nv-sn", "MCD_CAIS_UHA_sn"]:
-		init_fun_sn, apply_fun_sn = initialize_mcd_network(dim, emb_dim, nbridges, rho_dim=dim, nlayers=3)
+		init_fun_sn, apply_fun_sn = initialize_mcd_network(dim, emb_dim, nbridges, rho_dim=dim, nlayers=nlayers)
 		params_train['sn'] = init_fun_sn(jax.random.PRNGKey(seed), None)[1]
 	else:
 		apply_fun_sn = None

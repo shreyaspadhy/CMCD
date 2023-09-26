@@ -115,7 +115,7 @@ def main(config):
 			
 			print(trainable)
 			params_flat, unflatten, params_fixed = mcdbm.initialize(dim=dim, nbridges=config.nbridges, vdparams=vdparams_init, eta=config.init_eta, eps = config.init_eps,
-				trainable=trainable, mode=config.boundmode, emb_dim=config.emb_dim)
+				trainable=trainable, mode=config.boundmode, emb_dim=config.emb_dim, nlayers=config.nlayers)
 			grad_and_loss = jax.jit(jax.grad(mcdbm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
 
 			loss_fn = jax.jit(mcdbm.compute_bound, static_argnums = (2, 3, 4))
