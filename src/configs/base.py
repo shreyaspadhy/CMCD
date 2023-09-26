@@ -72,6 +72,7 @@ def get_config():
     config.run_cluster = 0
     config.n_samples = 500
     config.n_input_dist_seeds = 30
+    config.emb_dim = 20
 
     # NICE Config/
     config.im_size = 14

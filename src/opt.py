@@ -77,7 +77,7 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
 		
 		grad, (loss, z) = grad_and_loss(seeds, params_flat, unflatten, params_fixed, log_prob_model)
 
-		if "pretrain" not in log_prefix:
+		if "pretrain" not in log_prefix and i  % 100 == 0:
 			if info.model == "nice":
 				make_grid(z, info.im_size, n=64, wandb_prefix=f'{log_prefix}/images')
 			if target_samples is not None:

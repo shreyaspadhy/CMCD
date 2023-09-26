@@ -40,7 +40,7 @@ def evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob
 # 		fk_mean = z - params["eps"] * jax.grad(U)(z, beta) - params["eps"] * apply_fun_sn(params["sn"], z, i) # - because it is gradient of U = -log \pi
 		uf = gradU(z, beta) if stable else jax.grad(U)(z, beta)
 
-		eps = _eps_schedule(params["eps"], i)
+		eps = _cosine_eps_schedule(params["eps"], i)
 		fk_mean = z - eps * uf - eps * apply_fun_sn(params["sn"], z, i)
         
 		scale = np.sqrt(2 * eps)

@@ -10,6 +10,8 @@ from chex import Array
 import numpy as np
 import matplotlib.pyplot as plt
 import ot
+from sinkhorn import sinkhorn
+import torch
 
 def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
     x = np.array(x[:n].reshape(-1, im_size, im_size))
@@ -83,11 +85,12 @@ def W2_distance(x: Array, y: Array):
     # x, y is [n_samples, dim], [n_samples, dim]
     n_samples, dim = x.shape
 
-    x, y = np.array(x), np.array(y)
-    a, b = np.ones((n_samples,)), np.ones((n_samples,))
-    a, b = a / np.sum(a), b / np.sum(b)
+    x, y = np.array(x).reshape((n_samples, dim)), np.array(y).reshape((n_samples, dim))
 
-    W2 = np.sqrt(ot.emd2(a, b, ot.dist(x, y)))
+    # W2 = ot.sinkhorn2(a, b, M, reg=0.001)
+    W2, _, _ = sinkhorn(torch.tensor(x), torch.tensor(y))
+
+    # print(f'W2 : ', W2.shape)
 
     return W2
 
@@ -101,6 +104,6 @@ def sinkhorn_divergence(x: Array, y: Array, reg=1e-3):
     a, b = a / np.sum(a), b / np.sum(b)
 
     # W2 = np.sqrt(ot.emd2(a, b, ot.dist(x, y)))
-    W2 = np.sqrt(ot.sinkhorn2(a, b, ot.dist(x, y), reg=reg))
+    W2 = np.sqrt(ot.sinkhorn(a, b, ot.dist(x, y), reg=reg))
 
     return W2
