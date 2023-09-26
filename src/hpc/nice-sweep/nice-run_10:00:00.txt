@@ -1,18 +1,30 @@
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
-wandb agent shreyaspadhy/cais/if60sjde
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw
+wandb agent --count 1 shreyaspadhy/cais/v9yhslxw

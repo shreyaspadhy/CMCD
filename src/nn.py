@@ -11,13 +11,34 @@ def initialize_embedding(rng, nbridges, emb_dim, factor=0.05):
 
 
 def initialize_mcd_network(x_dim, emb_dim, nbridges, rho_dim=0, nlayers=4):
-	in_dim = x_dim + rho_dim + emb_dim
+	# in_dim = x_dim + rho_dim + emb_dim
 
-	layers = ([
-		serial(FanOut(2), parallel(Identity, serial(Dense(in_dim), Softplus)), FanInSum),
-		serial(FanOut(2), parallel(Identity, serial(Dense(in_dim), Softplus)), FanInSum),
-		Dense(x_dim)
-		])
+	if x_dim == 10: # funnel
+		emb_dim = 128
+		in_dim = x_dim + emb_dim
+		layers = ([
+			serial(FanOut(2), parallel(Identity, serial(Dense(64), Softplus)), FanInSum),
+			serial(FanOut(2), parallel(Identity, serial(Dense(64), Softplus)), FanInSum),
+			Dense(x_dim)
+			])
+	
+	elif x_dim == 196:
+		print(f'nice model with {x_dim} dimensions')
+		emb_dim = 128
+		in_dim = x_dim + emb_dim
+		# layers = ([
+		# 	serial(FanOut(2), parallel(Identity, serial(Dense(512), Softplus)), FanInSum),
+		# 	serial(FanOut(2), parallel(Identity, serial(Dense(256), Softplus)), FanInSum),
+		# 	serial(FanOut(2), parallel(Identity, serial(Dense(64), Softplus)), FanInSum),
+		# 	Dense(x_dim)
+		# 	])
+		layers = ([
+			serial(Dense(512), Softplus),
+			serial(Dense(256), Softplus),
+			serial(Dense(64), Softplus),
+			Dense(x_dim)
+			])
+		print(layers)
 	
 	init_fun_nn, apply_fun_nn = serial(*layers)
 
