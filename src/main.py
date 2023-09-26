@@ -49,10 +49,10 @@ def main(config):
 		setup_training(run)
 		# Load in the correct LR from sweeps
 		try:
-			if config.model == "nice":
+			if run.config.model == "nice":
 				config.model = run.config.model + f"_{run.config.alpha}_{run.config.n_bits}_{run.config.im_size}"
 				new_vals = {}
-			elif config.model in ["funnel"]:
+			elif run.config.model in ["funnel"]:
 				new_vals = {}
 			else:
 				new_vals = {"lr": LR_DICT[run.config.model][run.config.boundmode]}
