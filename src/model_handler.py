@@ -2,6 +2,7 @@ from jax import grad, vmap
 import jax.numpy as np
 import numpy as onp
 import jax.random as jr
+import jax.scipy.linalg as slinalg
 import jax
 import numpyro
 from jax.flatten_util import ravel_pytree
@@ -13,6 +14,7 @@ import wandb
 import pickle
 import haiku as hk
 from nice import NICE
+import chex
 
 from jax.scipy.special import logsumexp
 from jax.scipy.stats import multivariate_normal
@@ -30,15 +32,18 @@ ConfigDict = Any
 models_gym = ['lorenz', 'brownian', 'banana']
 
 def load_model(model = 'log_sonar', config = None):
-	if model in models_gym:
-		return load_model_gym(model)
-	if 'nice' in model:
-		return load_model_nice(model, config)
-	if 'funnel' in model:
-		return load_model_funnel(model, config)
-	if 'lgcp' in model:
-		return load_model_lgcp(model, config)
-	return load_model_other(model)
+    if model in models_gym:
+      return load_model_gym(model)
+    if 'nice' in model:
+      return load_model_nice(model, config)
+    if 'funnel' in model:
+      return load_model_funnel(model, config)
+    if 'lgcp' in model:
+      return load_model_lgcp(model, config)
+    if 'gmm' in model:
+      return load_model_gmm(model, config)
+
+    return load_model_other(model)
 
 
 def load_model_gym(model='banana'):
@@ -138,10 +143,88 @@ def load_model_funnel(model = 'funnel', config = None):
 	return neg_energy, d, sample_data
 
 
-def load_model_lgcp(model = 'lgcp', config = None):
-	lgcp = LogGaussianCoxPines(config, num_dim=1600)
+class ChallengingTwoDimensionalMixture(LogDensity):
+  """A challenging mixture of Gaussians in two dimensions.
 
-	return lgcp.evaluate_log_density, lgcp._num_latents
+  num_dim should be 2. config is unused in this case.
+  """
+
+  def _check_constructor_inputs(self, config: ConfigDict,
+                                sample_shape):
+    del config
+    # chex.assert_trees_all_equal(sample_shape, (2,))
+
+  def raw_log_density(self, x: Array) -> Array:
+    """A raw log density that we will then symmetrize."""
+    mean_a = np.array([3.0, 0.])
+    mean_b = np.array([-2.5, 0.])
+    mean_c = np.array([2.0, 3.0])
+    means = np.stack((mean_a, mean_b, mean_c), axis=0)
+    cov_a = np.array([[0.7, 0.], [0., 0.05]])
+    cov_b = np.array([[0.7, 0.], [0., 0.05]])
+    cov_c = np.array([[1.0, 0.95], [0.95, 1.0]])
+    covs = np.stack((cov_a, cov_b, cov_c), axis=0)
+    log_weights = np.log(np.array([1./3, 1./3., 1./3.]))
+
+    print(means.shape, covs.shape, x.shape)
+    l = np.linalg.cholesky(covs)
+    # y = np.linalg.solve(l, (x[None, :] - means))
+    y = slinalg.solve_triangular(l, x[None, :] - means, lower=True, trans=0)
+    mahalanobis_term = -1/2 * np.einsum("...i,...i->...", y, y)
+    n = means.shape[-1]
+    normalizing_term = -n / 2 * np.log(2 * np.pi) - np.log(
+        l.diagonal(axis1=-2, axis2=-1)).sum(axis=1)
+    individual_log_pdfs = mahalanobis_term + normalizing_term
+    mixture_weighted_pdfs = individual_log_pdfs + log_weights
+    return logsumexp(mixture_weighted_pdfs)
+
+  def make_2d_invariant(self, log_density, x: Array) -> Array:
+    density_a = log_density(x)
+    density_b = log_density(np.flip(x))
+    return np.logaddexp(density_a, density_b) - np.log(2)
+
+  def evaluate_log_density(self, x: Array) -> Array:
+    print(x.shape)
+    density_func = lambda x: self.make_2d_invariant(self.raw_log_density, x)
+    return density_func(x)
+    # else:
+    #   return jax.vmap(density_func)(x)
+  
+  def sample(self, rng_key, num_samples):
+    mean_a = np.array([3.0, 0.0])
+    mean_b = np.array([-2.5, 0.0])
+    mean_c = np.array([2.0, 3.0])
+    cov_a = np.array([[0.7, 0.0], [0.0, 0.05]])
+    cov_b = np.array([[0.7, 0.0], [0.0, 0.05]])
+    cov_c = np.array([[1.0, 0.95], [0.95, 1.0]])
+    means = [mean_a, mean_b, mean_c]
+    covs = [cov_a, cov_b, cov_c]
+    log_weights = np.log(np.array([1.0 / 3, 1.0 / 3, 1.0 / 3]))
+    num_components = len(means)
+    samples = []
+    k1, k2 = jr.split(rng_key)
+    # Sample from the GMM components based on the mixture weights
+    for i, _ in enumerate(range(num_samples)):
+        # Sample a component index based on the mixture weights
+        component_idx = jax.random.choice(k1 + i, num_components, p=np.exp(log_weights))
+        # Sample from the chosen component
+        chosen_mean = means[component_idx]
+        chosen_cov = covs[component_idx]
+        sample = jax.random.multivariate_normal(k2 + i, chosen_mean, chosen_cov)
+        samples.append(sample)
+    return np.stack(samples)
+
+
+
+def load_model_gmm(model = "gmm", config = None):
+  gmm = ChallengingTwoDimensionalMixture(config, num_dim=2)
+  
+  # log_density_fn = lambda x: np.squeeze(gmm.evaluate_log_density(x[None, :]))
+
+  # x = np.array([0., 0.])
+  # print(x.shape)
+  # print(gmm.evaluate_log_density(np.array([0., 0.])))
+  return gmm.evaluate_log_density, 2, gmm.sample
 
 
 class LogGaussianCoxPines(LogDensity):
@@ -251,3 +334,9 @@ class LogGaussianCoxPines(LogDensity):
       return self._posterior_log_density(x)
     else:
       return jax.vmap(self._posterior_log_density)(x)
+
+def load_model_lgcp(model = 'lgcp', config = None):
+	lgcp = LogGaussianCoxPines(config, num_dim=1600)
+    
+
+	return lgcp.evaluate_log_density, lgcp._num_latents

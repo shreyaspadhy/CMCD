@@ -15,8 +15,10 @@ import wandb
 from absl import app, flags
 from utils import flatten_nested_dict, update_config_dict, setup_training, make_grid, W2_distance
 from jax import scipy as jscipy
-from configs.base import LR_DICT
+from configs.base import LR_DICT, FUNNEL_EPS_DICT
+import os
 
+os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = "0.9"
 
 ml_collections.config_flags.DEFINE_config_file(
     "config",
@@ -49,10 +51,13 @@ def main(config):
 		setup_training(run)
 		# Load in the correct LR from sweeps
 		try:
-			if config.model == "nice":
+			if run.config.model == "nice":
 				config.model = run.config.model + f"_{run.config.alpha}_{run.config.n_bits}_{run.config.im_size}"
 				new_vals = {}
-			elif config.model in ["funnel"]:
+			elif run.config.model in ["funnel"]:
+				values = FUNNEL_EPS_DICT[run.config.nbridges]
+				new_vals = {"init_eps": values["init_eps"], "lr": values["lr"]}
+			elif run.config.model in ["gmm"]:
 				new_vals = {}
 			else:
 				new_vals = {"lr": LR_DICT[run.config.model][run.config.boundmode]}
@@ -65,7 +70,7 @@ def main(config):
 
 		print(config)
 
-		if config.model in ['nice', 'funnel']:
+		if config.model in ['nice', 'funnel', 'gmm']:
 			log_prob_model, dim, sample_from_target_fn = load_model(config.model, config)
 		else:
 			log_prob_model, dim = load_model(config.model, config)
@@ -167,7 +172,7 @@ def main(config):
 			})
 		
 		# Plot samples
-		if config.model in ["nice", "funnel"]:
+		if config.model in ["nice", "funnel", "gmm"]:
 			other_target_samples = sample_from_target_fn(jax.random.PRNGKey(2), samples.shape[0])
 
 			w2_dists, self_w2_dists = [], []
