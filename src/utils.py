@@ -10,7 +10,6 @@ from chex import Array
 import numpy as np
 import matplotlib.pyplot as plt
 import ot
-from sinkhorn import sinkhorn
 import torch
 
 def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
