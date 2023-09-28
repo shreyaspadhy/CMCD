@@ -13,19 +13,21 @@ parameters:
   lr:
     values: [1e-3, 1e-4]
   N:
-    values: [1]
+    values: [300]
   iters:
     values: [11000]
   init_eps:
-    values: [0.01, 0.02, 0.05, 0.1]
+    values: [0.01, 0.05]
   init_sigma:
-    values: [1, 2, 3]
+    values: [1, 2]
   pretrain_mfvi:
     values: [False]
   train_vi:
     values: [False, True]
   train_eps:
     values: [False]
+  config.emb_dim:
+    values: [36, 210]
 
 command:
   - python

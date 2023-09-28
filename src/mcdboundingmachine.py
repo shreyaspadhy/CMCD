@@ -10,7 +10,7 @@ from nn import initialize_mcd_network
 
 
 def initialize(dim, vdparams=None, nbridges=0, eps=0.01, gamma = 10., eta = 0.5, ngridb=32, mgridref_y=None, trainable = ['eps'], use_score_nn=True,
-	emb_dim=20, seed=1, mode="MCD_U_lp-e"):
+	emb_dim=36, seed=1, mode="MCD_U_lp-e"):
 	"""
 	Modes allowed:
 		- MCD_ULA: This is ULA. Method from Thin et al.

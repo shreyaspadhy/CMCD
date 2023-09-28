@@ -217,7 +217,7 @@ class ChallengingTwoDimensionalMixture(LogDensity):
 
 
 def load_model_gmm(model = "gmm", config = None):
-  gmm = ChallengingTwoDimensionalMixture(config, num_dim=2)
+  gmm = ChallengingTwoDimensionalMixture(config, sample_shape=(2,))
   
   # log_density_fn = lambda x: np.squeeze(gmm.evaluate_log_density(x[None, :]))
 
