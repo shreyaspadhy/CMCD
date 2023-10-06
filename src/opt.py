@@ -6,7 +6,7 @@ from tqdm import tqdm
 import sys
 import functools
 import wandb
-from utils import make_grid, W2_distance
+from utils import make_grid, W2_distance, plot_gmm
 
 def adam(step_size, b1 = 0.9, b2 = 0.999, eps = 1e-8):
 	# Basically JAX's thing with added projection for some parameters.
@@ -80,6 +80,8 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
 		if "pretrain" not in log_prefix and i  % 100 == 0:
 			if info.model == "nice":
 				make_grid(z, info.im_size, n=64, wandb_prefix=f'{log_prefix}/images')
+			if info.model == "many_gmm":
+				plot_gmm(z, log_prob_model, info.loc_scaling, wandb_prefix=f'{log_prefix}/images')
 			if target_samples is not None:
 				if info.model == "nice":
 					make_grid(target_samples, info.im_size, n=64, wandb_prefix=f'{log_prefix}/target')

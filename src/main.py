@@ -43,6 +43,7 @@ FLAGS = flags.FLAGS
 # 	- LDVI uses MCD_U_a-lp-sn
 #   - CAIS uses MCD_CAIS_sn
 #   - CAIS_UHA uses MCD_CAIS_UHA_sn
+#   - CAIS_var uses MCD_CAIS_var_sn
 
 def main(config):
 	wandb_kwargs = {
@@ -129,7 +130,10 @@ def main(config):
 			params_flat, unflatten, params_fixed = mcdbm.initialize(dim=dim, nbridges=config.nbridges, vdparams=vdparams_init, eta=config.init_eta, eps = config.init_eps,
 				trainable=trainable, mode=config.boundmode, emb_dim=config.emb_dim, nlayers=config.nlayers)
 			
-			compute_bound_fn = partial(mcdbm.compute_bound, beta_schedule=config.beta_schedule, grad_clipping=config.grad_clipping)
+			if 'var' in config.boundmode:
+				compute_bound_fn = partial(mcdbm.compute_bound_var, beta_schedule=config.beta_schedule, grad_clipping=config.grad_clipping)
+			else:
+				compute_bound_fn = partial(mcdbm.compute_bound, beta_schedule=config.beta_schedule, grad_clipping=config.grad_clipping)
 			grad_and_loss = jax.jit(jax.grad(compute_bound_fn, 1, has_aux = True), static_argnums = (2, 3, 4))
 
 			loss_fn = jax.jit(compute_bound_fn, static_argnums = (2, 3, 4))

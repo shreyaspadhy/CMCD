@@ -43,8 +43,8 @@ def load_model(model = 'log_sonar', config = None):
 		return load_model_lgcp(model, config)
 	if 'many_gmm' in model:
 		return load_model_manygmm(model, config)
-  if 'gmm' in model:
-      return load_model_gmm(model, config)
+  # if 'gmm' in model:
+  #   return load_model_gmm(model, config)
 	return load_model_other(model)
 
 
@@ -231,9 +231,9 @@ def load_model_gmm(model = "gmm", config = None):
 
 
 def load_model_manygmm(model = 'many_gmm', config = None):
-  gmm = GMM(dim=4, n_mixes=config.n_mixes, loc_scaling=config.loc_scaling)
+  gmm = GMM(dim=2, n_mixes=config.n_mixes, loc_scaling=config.loc_scaling)
 
-  return gmm.log_prob, 4, gmm.sample
+  return gmm.log_prob, 2, gmm.sample
 
 
 class GMM:
@@ -257,7 +257,6 @@ class GMM:
         )
 
     def log_prob(self, x):
-        print(f'x shape: {x.shape}')
         log_prob = self.distribution.log_prob(x)
 
         # Can have numerical instabilities once log prob is very small. Manually override to prevent this.

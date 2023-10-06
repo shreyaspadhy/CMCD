@@ -10,7 +10,7 @@ from mcd_under_lp_a import evolve_underdamped_lp_a
 from mcd_under_lp_a_cais import evolve_underdamped_lp_a_cais
 from mcd_under_lp_ea import evolve_underdamped_lp_ea
 from mcd_cais import evolve_overdamped_cais
-
+from mcd_cais_var import evolve_overdamped_var_cais
 
 # For transition kernel
 def sample_kernel(rng_key, mean, scale):
@@ -45,6 +45,9 @@ def evolve(z, betas, params, rng_key_gen, params_fixed, log_prob_model, beta_sch
 	elif mode == "MCD_CAIS_sn":
 		return evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=True,
 									  beta_schedule=beta_schedule, grad_clipping=grad_clipping)
+	elif mode == "MCD_CAIS_var_sn":
+		return evolve_overdamped_var_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=True,
+									  	  beta_schedule=beta_schedule, grad_clipping=grad_clipping)
 	elif mode == "MCD_CAIS_UHA_sn":
 		return evolve_underdamped_lp_a_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=True,
 			full_sn=True, beta_schedule=beta_schedule, grad_clipping=grad_clipping)

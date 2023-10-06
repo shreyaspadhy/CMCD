@@ -47,7 +47,7 @@ def initialize(dim, vdparams=None, nbridges=0, eps=0.01, gamma = 10., eta = 0.5,
 	else:
 		params_notrain['eta'] = eta
 
-	if mode in ["MCD_ULA_sn", "MCD_U_e-lp-sna", "MCD_U_a-lp-sna", "MCD_CAIS_sn"]:
+	if mode in ["MCD_ULA_sn", "MCD_U_e-lp-sna", "MCD_U_a-lp-sna", "MCD_CAIS_sn", "MCD_CAIS_var_sn"]:
 		init_fun_sn, apply_fun_sn = initialize_mcd_network(dim, emb_dim, nbridges, nlayers=nlayers)
 		params_train['sn'] = init_fun_sn(jax.random.PRNGKey(seed), None)[1]
 	elif mode in ["MCD_U_a-lp-sn", "MCD_U_ea-lp-sn", "MCD_U_a-nv-sn", "MCD_CAIS_UHA_sn"]:
@@ -112,3 +112,9 @@ def compute_bound(seeds, params_flat, unflatten, params_fixed, log_prob, beta_sc
 	ratios, (z, _) = jax.vmap(compute_ratio, in_axes = (0, None, None, None, None, None, None))(seeds, params_flat, unflatten, params_fixed, log_prob, beta_schedule, grad_clipping)
 	# ratios, (z, _) = compute_ratio(seeds[0], params_flat, unflatten, params_fixed, log_prob)
 	return ratios.mean(), (ratios, z)
+
+
+def compute_bound_var(seeds, params_flat, unflatten, params_fixed, log_prob, beta_schedule=None, grad_clipping=False):
+	ratios, (z, _) = jax.vmap(compute_ratio, in_axes = (0, None, None, None, None, None, None))(seeds, params_flat, unflatten, params_fixed, log_prob, beta_schedule, grad_clipping)
+	# ratios, (z, _) = compute_ratio(seeds[0], params_flat, unflatten, params_fixed, log_prob)
+	return ratios.var(ddof=1), (ratios, z)

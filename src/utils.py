@@ -10,6 +10,9 @@ from chex import Array
 import numpy as np
 import matplotlib.pyplot as plt
 import ot
+import itertools
+import wandb
+
 
 def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
     x = np.array(x[:n].reshape(-1, im_size, im_size))
@@ -26,6 +29,55 @@ def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
     # Log into wandb
     wandb.log({f"{wandb_prefix}": fig})
     plt.close()
+
+
+def plot_contours_2D(log_prob_func,
+                     ax: Optional[plt.Axes] = None,
+                     bound=3, levels=20):
+    """Plot the contours of a 2D log prob function."""
+    if ax is None:
+        fig, ax = plt.subplots(1)
+    n_points = 200
+    x_points_dim1 = np.linspace(-bound, bound, n_points)
+    x_points_dim2 = np.linspace(-bound, bound, n_points)
+    x_points = np.array(list(itertools.product(x_points_dim1, x_points_dim2)))
+    log_probs = log_prob_func(x_points)
+    log_probs = jnp.clip(log_probs, a_min=-1000, a_max=None)
+    x1 = x_points[:, 0].reshape(n_points, n_points)
+    x2 = x_points[:, 1].reshape(n_points, n_points)
+    z = log_probs.reshape(n_points, n_points)
+    ax.contour(x1, x2, z, levels=levels)
+
+
+def plot_marginal_pair(samples,
+                  ax = None,
+                  marginal_dims = (0, 1),
+                  bounds = (-5, 5),
+                  alpha: float = 0.5):
+    """Plot samples from marginal of distribution for a given pair of dimensions."""
+    if not ax:
+        fig, ax = plt.subplots(1)
+    samples = jnp.clip(samples, bounds[0], bounds[1])
+    ax.plot(samples[:, marginal_dims[0]], samples[:, marginal_dims[1]], "o", alpha=alpha)
+
+
+def plot_gmm(samples, log_p_fn, loc_scaling, wandb_prefix: str=""):
+    plot_bound = loc_scaling * 1.5
+    fig, axs = plt.subplots(1, figsize=(5, 5))
+    plot_marginal_pair(samples, axs, bounds=(-plot_bound, plot_bound))
+    # plot_marginal_pair(x_smc, axs[1], bounds=(-plot_bound, plot_bound))
+    # plot_marginal_pair(x_smc_resampled, axs[2], bounds=(-plot_bound, plot_bound))
+    plot_contours_2D(log_p_fn, axs, bound=plot_bound, levels=50)
+    # plot_contours_2D(log_p_fn, axs[1], bound=plot_bound, levels=50)
+    # plot_contours_2D(log_p_fn, axs[2], bound=plot_bound, levels=50)
+    axs.set_title("flow samples")
+    # axs[1].set_title("smc samples")
+    # axs[2].set_title("resampled smc samples")
+    plt.tight_layout()
+    wandb.log({f"{wandb_prefix}": wandb.Image(fig)})
+    plt.close()
+    # plt.show()
+    # return plot
 
 
 # Taken from https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
