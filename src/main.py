@@ -55,6 +55,8 @@ def main(config):
 			elif run.config.model in ["funnel"]:
 				values = FUNNEL_EPS_DICT[run.config.nbridges]
 				new_vals = {"init_eps": values["init_eps"], "lr": values["lr"]}
+			elif run.config.model in ["gmm"]:
+				new_vals = {}
 			else:
 				new_vals = {"lr": LR_DICT[run.config.model][run.config.boundmode]}
 				print(new_vals)
@@ -66,7 +68,7 @@ def main(config):
 
 		print(config)
 
-		if config.model in ['nice', 'funnel']:
+		if config.model in ['nice', 'funnel', 'gmm']:
 			log_prob_model, dim, sample_from_target_fn = load_model(config.model, config)
 		else:
 			log_prob_model, dim = load_model(config.model, config)
@@ -168,7 +170,7 @@ def main(config):
 			})
 		
 		# Plot samples
-		if config.model in ["nice", "funnel"]:
+		if config.model in ["nice", "funnel", "gmm"]:
 			other_target_samples = sample_from_target_fn(jax.random.PRNGKey(2), samples.shape[0])
 
 			w2_dists, self_w2_dists = [], []
