@@ -13,6 +13,7 @@ import wandb
 import pickle
 import haiku as hk
 from nice import NICE
+import distrax
 
 from jax.scipy.special import logsumexp
 from jax.scipy.stats import multivariate_normal
@@ -38,11 +39,14 @@ def load_model(model = 'log_sonar', config = None):
 		return load_model_funnel(model, config)
 	if 'lgcp' in model:
 		return load_model_lgcp(model, config)
+	if 'many_gmm' in model:
+		return load_model_manygmm(model, config)
 	return load_model_other(model)
 
 
 def load_model_gym(model='banana'):
 	def log_prob_model(z):
+		print(f'z shape: {z.shape}')
 		x = target.default_event_space_bijector(z)
 		return (target.unnormalized_log_prob(x) + target.default_event_space_bijector.forward_log_det_jacobian(z, event_ndims = 1))
 	if model == 'lorenz':
@@ -142,6 +146,46 @@ def load_model_lgcp(model = 'lgcp', config = None):
 	lgcp = LogGaussianCoxPines(config, num_dim=1600)
 
 	return lgcp.evaluate_log_density, lgcp._num_latents
+
+
+def load_model_manygmm(model = 'many_gmm', config = None):
+  gmm = GMM(dim=4, n_mixes=config.n_mixes, loc_scaling=config.loc_scaling)
+
+  return gmm.log_prob, 4, gmm.sample
+
+
+class GMM:
+    def __init__(self, dim, n_mixes, loc_scaling, log_var_scaling=0.1, seed=0):
+        self.seed = seed
+        self.n_mixes = n_mixes
+        self.dim = dim
+        key = jax.random.PRNGKey(seed)
+        logits = np.ones(n_mixes)
+        mean = jax.random.uniform(shape=(n_mixes, dim), key=key, minval=-1.0, maxval=1.0) * loc_scaling
+        log_var = np.ones(shape=(n_mixes, dim)) * log_var_scaling
+
+        mixture_dist = distrax.Categorical(logits=logits)
+        var = jax.nn.softplus(log_var)
+        components_dist = distrax.Independent(
+            distrax.Normal(loc=mean, scale=var), reinterpreted_batch_ndims=1
+        )
+        self.distribution = distrax.MixtureSameFamily(
+            mixture_distribution=mixture_dist,
+            components_distribution=components_dist,
+        )
+
+    def log_prob(self, x):
+        print(f'x shape: {x.shape}')
+        log_prob = self.distribution.log_prob(x)
+
+        # Can have numerical instabilities once log prob is very small. Manually override to prevent this.
+        # This will cause the flow will ignore regions with less than 1e-4 probability under the target.
+        valid_log_prob = log_prob > -1e4
+        log_prob = np.where(valid_log_prob, log_prob, -np.inf*np.ones_like(log_prob))
+        return log_prob
+
+    def sample(self, seed, sample_shape):
+        return self.distribution.sample(seed=seed, sample_shape=sample_shape)
 
 
 class LogGaussianCoxPines(LogDensity):

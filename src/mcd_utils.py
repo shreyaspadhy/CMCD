@@ -21,7 +21,7 @@ def log_prob_kernel(x, mean, scale):
 	dist = npdist.Independent(npdist.Normal(loc=mean, scale=scale), 1)
 	return dist.log_prob(x)
 
-def evolve(z, betas, params, rng_key_gen, params_fixed, log_prob_model):
+def evolve(z, betas, params, rng_key_gen, params_fixed, log_prob_model, beta_schedule=None, grad_clipping=False):
 	mode = params_fixed[2]
 	if mode == "MCD_ULA":
 		return evolve_overdamped_orig(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=False)
@@ -43,10 +43,11 @@ def evolve(z, betas, params, rng_key_gen, params_fixed, log_prob_model):
 		return evolve_underdamped_lp_ea(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=True,
 			full_sn=True)
 	elif mode == "MCD_CAIS_sn":
-		return evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=True)
+		return evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=True,
+									  beta_schedule=beta_schedule, grad_clipping=grad_clipping)
 	elif mode == "MCD_CAIS_UHA_sn":
 		return evolve_underdamped_lp_a_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=True,
-			full_sn=True)
+			full_sn=True, beta_schedule=beta_schedule, grad_clipping=grad_clipping)
 	else:
 		raise NotImplementedError("Mode not implemented.")
 

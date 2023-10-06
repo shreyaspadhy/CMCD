@@ -77,7 +77,7 @@ def initialize(dim, vdparams=None, nbridges=0, eps=0.01, gamma = 10., eta = 0.5,
 	return params_flat, unflatten, params_fixed
 
 
-def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob):
+def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob, beta_schedule=None, grad_clipping=False):
 	params_train, params_notrain = unflatten(params_flat)
 	params_notrain = jax.lax.stop_gradient(params_notrain)
 	params = {**params_train, **params_notrain} # Gets all parameters in single place
@@ -98,7 +98,8 @@ def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob):
 	delta_H = np.array([0.])
 	if nbridges >= 1:
 		rng_key, rng_key_gen = jax.random.split(rng_key_gen)
-		z, w_mom, _ = mcd_utils.evolve(z, betas, params, rng_key, params_fixed, log_prob)
+		z, w_mom, _ = mcd_utils.evolve(z, betas, params, rng_key, params_fixed, log_prob, 
+									   beta_schedule=beta_schedule, grad_clipping=grad_clipping)
 		w += w_mom
 
 	# Update weight with final model evaluation
@@ -107,7 +108,7 @@ def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob):
 
 
 # @functools.partial(jax.jit, static_argnums = (2, 3, 4))
-def compute_bound(seeds, params_flat, unflatten, params_fixed, log_prob):
-	ratios, (z, _) = jax.vmap(compute_ratio, in_axes = (0, None, None, None, None))(seeds, params_flat, unflatten, params_fixed, log_prob)
+def compute_bound(seeds, params_flat, unflatten, params_fixed, log_prob, beta_schedule=None, grad_clipping=False):
+	ratios, (z, _) = jax.vmap(compute_ratio, in_axes = (0, None, None, None, None, None, None))(seeds, params_flat, unflatten, params_fixed, log_prob, beta_schedule, grad_clipping)
 	# ratios, (z, _) = compute_ratio(seeds[0], params_flat, unflatten, params_fixed, log_prob)
 	return ratios.mean(), (ratios, z)

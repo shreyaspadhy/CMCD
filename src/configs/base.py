@@ -72,6 +72,9 @@ def get_config():
     config.train_vi = True
     config.train_eps = True
 
+    config.beta_schedule = None
+    config.grad_clipping = False
+
     config.mfvi_iters = 150000
     config.mfvi_lr = 0.01
     config.iters = 150000 # 150000 for all except NICE
@@ -98,8 +101,15 @@ def get_config():
     # LGCP configs
     config.use_whitened = False
     
+    # Many GMM configs
+    config.gmm_easy_mode = False
+    if config.gmm_easy_mode:
+        config.n_mixes = 4
+        config.loc_scaling = 10
+    else:
+        config.n_mixes = 40
+        config.loc_scaling = 40
     
-
     cwd = os.getcwd()
     config.file_path = os.path.join(cwd, "../pines.csv")
 

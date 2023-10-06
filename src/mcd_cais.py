@@ -4,7 +4,8 @@ import variationaldist as vd
 
 import pdb
 
-def evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, use_sn=False):
+def evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, 
+						   use_sn=False, beta_schedule=None, grad_clipping=False):
 	def U(z, beta):
 		return -1. * (beta * log_prob_model(z) + (1. - beta) * vd.log_prob(params['vd'], z))
 
@@ -32,7 +33,7 @@ def evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob
 		return init_eps * decay
 	
 
-	def evolve(aux, i, stable=True):
+	def evolve(aux, i, stable=grad_clipping, beta_schedule=beta_schedule):
 		z, w, rng_key_gen = aux
 		beta = betas[i]
 
@@ -40,7 +41,13 @@ def evolve_overdamped_cais(z, betas, params, rng_key_gen, params_fixed, log_prob
 # 		fk_mean = z - params["eps"] * jax.grad(U)(z, beta) - params["eps"] * apply_fun_sn(params["sn"], z, i) # - because it is gradient of U = -log \pi
 		uf = gradU(z, beta) if stable else jax.grad(U)(z, beta)
 
-		eps = _cosine_eps_schedule(params["eps"], i)
+		if beta_schedule == 'cos_sq':
+			eps = _cosine_eps_schedule(params["eps"], i)
+		elif beta_schedule == 'linear':
+			eps = _eps_schedule(params["eps"], i)
+		else:
+			eps = params["eps"]
+
 		fk_mean = z - eps * uf - eps * apply_fun_sn(params["sn"], z, i)
         
 		scale = np.sqrt(2 * eps)
