@@ -10,7 +10,6 @@ from chex import Array
 import numpy as np
 import matplotlib.pyplot as plt
 import ot
-import torch
 
 def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
     x = np.array(x[:n].reshape(-1, im_size, im_size))
@@ -91,17 +90,3 @@ def W2_distance(x, y, reg = 0.01):
         numItermax=10000, stopThr=1e-16
     )
     return T_reg
-
-
-def sinkhorn_divergence(x: Array, y: Array, reg=1e-3):
-    # x, y is [n_samples, dim], [n_samples, dim]
-    n_samples, dim = x.shape
-
-    x, y = np.array(x), np.array(y)
-    a, b = np.ones((n_samples,)), np.ones((n_samples,))
-    a, b = a / np.sum(a), b / np.sum(b)
-
-    # W2 = np.sqrt(ot.emd2(a, b, ot.dist(x, y)))
-    W2 = np.sqrt(ot.sinkhorn(a, b, ot.dist(x, y), reg=reg))
-
-    return W2

@@ -16,6 +16,14 @@ from absl import app, flags
 from utils import flatten_nested_dict, update_config_dict, setup_training, make_grid, W2_distance
 from jax import scipy as jscipy
 from configs.base import LR_DICT, FUNNEL_EPS_DICT
+from functools import partial
+import os
+
+from jax.config import config as jax_config
+
+# os.environ["JAX_TRACEBACK_FILTERING"] = "off"
+
+jax_config.update('jax_traceback_filtering', "off")
 
 
 ml_collections.config_flags.DEFINE_config_file(
@@ -55,7 +63,7 @@ def main(config):
 			elif run.config.model in ["funnel"]:
 				values = FUNNEL_EPS_DICT[run.config.nbridges]
 				new_vals = {"init_eps": values["init_eps"], "lr": values["lr"]}
-			elif run.config.model in ["gmm"]:
+			elif run.config.model in ["many_gmm", "gmm"]:
 				new_vals = {}
 			else:
 				new_vals = {"lr": LR_DICT[run.config.model][run.config.boundmode]}
@@ -68,7 +76,7 @@ def main(config):
 
 		print(config)
 
-		if config.model in ['nice', 'funnel', 'gmm']:
+		if config.model in ['nice', 'funnel', 'gmm', 'many_gmm']:
 			log_prob_model, dim, sample_from_target_fn = load_model(config.model, config)
 		else:
 			log_prob_model, dim = load_model(config.model, config)
@@ -103,7 +111,8 @@ def main(config):
 				trainable = trainable + ('eps',)
 			if config.train_vi:
 				trainable = trainable + ('vd',)
-			params_flat, unflatten, params_fixed = bm.initialize(dim=dim, nbridges=config.nbridges, eta=config.init_eta, eps = config.init_eps,
+			params_flat, unflatten, params_fixed = bm.initialize(
+				dim=dim, nbridges=config.nbridges, eta=config.init_eta, eps = config.init_eps,
 				lfsteps=config.lfsteps, vdparams=vdparams_init, trainable=trainable)
 			grad_and_loss = jax.jit(jax.grad(bm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
 
@@ -119,9 +128,11 @@ def main(config):
 			print(trainable)
 			params_flat, unflatten, params_fixed = mcdbm.initialize(dim=dim, nbridges=config.nbridges, vdparams=vdparams_init, eta=config.init_eta, eps = config.init_eps,
 				trainable=trainable, mode=config.boundmode, emb_dim=config.emb_dim, nlayers=config.nlayers)
-			grad_and_loss = jax.jit(jax.grad(mcdbm.compute_bound, 1, has_aux = True), static_argnums = (2, 3, 4))
+			
+			compute_bound_fn = partial(mcdbm.compute_bound, beta_schedule=config.beta_schedule, grad_clipping=config.grad_clipping)
+			grad_and_loss = jax.jit(jax.grad(compute_bound_fn, 1, has_aux = True), static_argnums = (2, 3, 4))
 
-			loss_fn = jax.jit(mcdbm.compute_bound, static_argnums = (2, 3, 4))
+			loss_fn = jax.jit(compute_bound_fn, static_argnums = (2, 3, 4))
 
 		else:
 			raise NotImplementedError('Mode %s not implemented.' % config.boundmode)
