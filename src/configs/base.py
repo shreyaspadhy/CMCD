@@ -5,6 +5,7 @@ import os
 LR_DICT = {
     "log_sonar": {"MCD_CAIS_UHA_sn": 1e-3,
                   "MCD_CAIS_sn": 1e-3,
+                  "MCD_CAIS_var_sn": 1e-3,
                   "MCD_U_a-lp-sn": 1e-3,
                   "UHA": 1e-4,
                   "MCD_ULA_sn": 1e-3,

@@ -100,6 +100,7 @@ def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob, beta_sch
         rng_key, rng_key_gen = jax.random.split(rng_key_gen)
         z, w_mom, _ = mcd_utils.evolve(z, betas, params, rng_key, params_fixed, log_prob, 
                                        beta_schedule=beta_schedule, grad_clipping=grad_clipping)
+#         jax.debug.breakpoint()
         w += w_mom
 
     # Update weight with final model evaluation
@@ -117,4 +118,5 @@ def compute_bound(seeds, params_flat, unflatten, params_fixed, log_prob, beta_sc
 def compute_bound_var(seeds, params_flat, unflatten, params_fixed, log_prob, beta_schedule=None, grad_clipping=False):
     ratios, (z, _) = jax.vmap(compute_ratio, in_axes = (0, None, None, None, None, None, None))(seeds, params_flat, unflatten, params_fixed, log_prob, beta_schedule, grad_clipping)
     # ratios, (z, _) = compute_ratio(seeds[0], params_flat, unflatten, params_fixed, log_prob)
-    return ratios.var(ddof=1), (ratios, z)
+#     jax.debug.breakpoint()
+    return ratios.var(ddof=0), (ratios, z)

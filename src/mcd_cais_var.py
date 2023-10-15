@@ -11,13 +11,23 @@ def evolve_overdamped_var_cais(z, betas, params, rng_key_gen, params_fixed, log_
     def U(z, beta):
         return -1. * (beta * log_prob_model(z) + (1. - beta) * vd.log_prob(params['vd'], z))
 
-    def gradU(z, beta, clip=1e2):
+    def gradU_old(z, beta, clip=1e2):
         p =  lambda z:  vd.log_prob(params['vd'], z)
         gp = jax.grad(p)(z)
         u = lambda z: log_prob_model(z)
         gu = jax.grad(u)(z)
         guc = np.clip(gu, -clip, clip)
         return -1. * (beta * guc + (1. - beta) * gp)
+    
+    def gradU(z, beta, clip=1e2):
+        p =  lambda z:  vd.log_prob(params['vd'], z)
+        gp = jax.grad(p)(z)
+        gpc =  np.clip(gp, -clip, clip)
+        u = lambda z: log_prob_model(z)
+        gu = jax.grad(u)(z)
+        guc = np.clip(gu, -clip, clip)
+        return -1. * (beta * guc + (1. - beta) * gpc)
+    
     
     dim, nbridges, mode, apply_fun_sn = params_fixed
 
@@ -77,6 +87,7 @@ def evolve_overdamped_var_cais(z, betas, params, rng_key_gen, params_fixed, log_
         w += bk_log_prob - fk_log_prob
         rng_key, rng_key_gen = jax.random.split(rng_key_gen)
         aux = z_new, w, rng_key_gen
+#         jax.debug.breakpoint()
         return aux, None
 
     print(f'running CAIS')
@@ -87,5 +98,10 @@ def evolve_overdamped_var_cais(z, betas, params, rng_key_gen, params_fixed, log_
     aux, _ = jax.lax.scan(evolve, aux, np.arange(nbridges))
     
     z, w, _ = aux
+#     jax.debug.breakpoint()
+    
+#     jax.debug.print("help {y} help", y=z)
+#     jax.debug.print("help {y} help", y=w)
+#     import pdb; pdb.set_trace()
     return z, w, None
 

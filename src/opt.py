@@ -7,6 +7,8 @@ import sys
 import functools
 import wandb
 from utils import make_grid, W2_distance, plot_gmm
+import gc
+
 
 def adam(step_size, b1 = 0.9, b2 = 0.999, eps = 1e-8):
     # Basically JAX's thing with added projection for some parameters.
@@ -64,6 +66,8 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
     losses = []
     tracker = {'eps': [], 'gamma': []}
     looper = tqdm(range(iters)) if info.run_cluster == 0 else range(iters)
+    
+    sample_crp = min(300, info.N)
     for i in looper:
         rng_key, rng_key_gen = jax.random.split(rng_key_gen)
         seeds = jax.random.randint(rng_key, (info.N,), 1, 1e6)
@@ -76,6 +80,11 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
             wandb.log({f'{log_prefix}/gamma': onp.array(tracker['gamma'][-1])})
         
         grad, (loss, z) = grad_and_loss(seeds, params_flat, unflatten, params_fixed, log_prob_model)
+#         jax.debug.breakpoint()
+        
+#         if i % 100 == 0:
+#             gc.collect()
+#             jax.clear_backends()
 
         if "pretrain" not in log_prefix and i  % 100 == 0:
             if info.model == "nice":
@@ -85,7 +94,7 @@ def run(info, lr, iters, params_flat, unflatten, params_fixed, log_prob_model, g
             if target_samples is not None:
                 if info.model == "nice":
                     make_grid(target_samples, info.im_size, n=64, wandb_prefix=f'{log_prefix}/target')
-                wandb.log({f'{log_prefix}/w2': W2_distance(z, target_samples[:z.shape[0], ...])})
+                wandb.log({f'{log_prefix}/w2': W2_distance(z[:sample_crp,...], target_samples[:sample_crp, ...])})
 
         losses.append(np.mean(loss).item())
         wandb.log({f'{log_prefix}/loss': np.mean(loss).item()})
