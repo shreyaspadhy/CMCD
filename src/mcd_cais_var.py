@@ -1,10 +1,8 @@
 import jax
 import jax.numpy as np
 import variationaldist as vd
-
 from jax.lax import stop_gradient
 
-import pdb
 
 def evolve_overdamped_var_cais(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel, 
                            use_sn=False, beta_schedule=None, grad_clipping=False):
@@ -51,7 +49,6 @@ def evolve_overdamped_var_cais(z, betas, params, rng_key_gen, params_fixed, log_
         z = stop_gradient(z)
         # Forward kernel
 #         fk_mean = z - params["eps"] * jax.grad(U)(z, beta) - params["eps"] * apply_fun_sn(params["sn"], z, i) # - because it is gradient of U = -log \pi
-        print(f'stable : {stable}')
         uf = gradU(z, beta) if stable else jax.grad(U)(z, beta)
 
         if beta_schedule == 'cos_sq':
@@ -90,7 +87,7 @@ def evolve_overdamped_var_cais(z, betas, params, rng_key_gen, params_fixed, log_
 #         jax.debug.breakpoint()
         return aux, None
 
-    print(f'running CAIS')
+    print('running CAIS')
     
     # Evolve system
     rng_key, rng_key_gen = jax.random.split(rng_key_gen)

@@ -1,20 +1,28 @@
+import itertools
 import os
 from collections.abc import MutableMapping
-from typing import List, NamedTuple, Optional, Union
+from typing import Optional
 
 import jax
 import jax.numpy as jnp
+import matplotlib.pyplot as plt
 import ml_collections
+import numpy as np
+import ot
 import wandb
 from chex import Array
-import numpy as np
-import matplotlib.pyplot as plt
-import ot
-import itertools
-import wandb
+from configs.base import FUNNEL_EPS_DICT, LR_DICT
 
 
-def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
+def make_grid(x: Array, im_size: int, n: int = 16, wandb_prefix: str = ""):
+    """
+    Plot a grid of images, and optionally log to wandb.
+
+    x: (N, im_size, im_size) array of images
+    im_size: size of images
+    n: number of images to plot
+    wandb_prefix: prefix to use for wandb logging
+    """
     x = np.array(x[:n].reshape(-1, im_size, im_size))
 
     n_rows = int(np.sqrt(n))
@@ -23,17 +31,18 @@ def make_grid(x: Array, im_size, n=16, wandb_prefix: str=""):
     # Plot each image
     for i in range(n_rows):
         for j in range(n_rows):
-            ax[i, j].imshow(x[i * n_rows + j], cmap='gray')
-            ax[i, j].axis('off')
-    
+            ax[i, j].imshow(x[i * n_rows + j], cmap="gray")
+            ax[i, j].axis("off")
+
     # Log into wandb
     wandb.log({f"{wandb_prefix}": fig})
     plt.close()
 
 
-def plot_contours_2D(log_prob_func,
-                     ax: Optional[plt.Axes] = None,
-                     bound=3, levels=20):
+# Taken from https://github.com/lollcat/fab-jax/blob/632e0a7d3dbd8da6b2ef043ab41e2346f29dfece/fabjax/utils/plot.py#L11
+def plot_contours_2D(
+    log_prob_func, ax: Optional[plt.Axes] = None, bound: int = 3, levels: int = 20
+):
     """Plot the contours of a 2D log prob function."""
     if ax is None:
         fig, ax = plt.subplots(1)
@@ -49,35 +58,28 @@ def plot_contours_2D(log_prob_func,
     ax.contour(x1, x2, z, levels=levels)
 
 
-def plot_marginal_pair(samples,
-                  ax = None,
-                  marginal_dims = (0, 1),
-                  bounds = (-5, 5),
-                  alpha: float = 0.5):
+# Taken from https://github.com/lollcat/fab-jax/blob/632e0a7d3dbd8da6b2ef043ab41e2346f29dfece/fabjax/utils/plot.py#L30
+def plot_marginal_pair(
+    samples, ax=None, marginal_dims=(0, 1), bounds=(-5, 5), alpha: float = 0.5
+):
     """Plot samples from marginal of distribution for a given pair of dimensions."""
     if not ax:
         fig, ax = plt.subplots(1)
     samples = jnp.clip(samples, bounds[0], bounds[1])
-    ax.plot(samples[:, marginal_dims[0]], samples[:, marginal_dims[1]], "o", alpha=alpha)
+    ax.plot(
+        samples[:, marginal_dims[0]], samples[:, marginal_dims[1]], "o", alpha=alpha
+    )
 
 
-def plot_gmm(samples, log_p_fn, loc_scaling, wandb_prefix: str=""):
+def plot_gmm(samples, log_p_fn, loc_scaling, wandb_prefix: str = ""):
     plot_bound = loc_scaling * 1.5
     fig, axs = plt.subplots(1, figsize=(5, 5))
     plot_marginal_pair(samples, axs, bounds=(-plot_bound, plot_bound))
-    # plot_marginal_pair(x_smc, axs[1], bounds=(-plot_bound, plot_bound))
-    # plot_marginal_pair(x_smc_resampled, axs[2], bounds=(-plot_bound, plot_bound))
     plot_contours_2D(log_p_fn, axs, bound=plot_bound, levels=50)
-    # plot_contours_2D(log_p_fn, axs[1], bound=plot_bound, levels=50)
-    # plot_contours_2D(log_p_fn, axs[2], bound=plot_bound, levels=50)
-    axs.set_title("flow samples")
-    # axs[1].set_title("smc samples")
-    # axs[2].set_title("resampled smc samples")
+    axs.set_title("samples")
     plt.tight_layout()
     wandb.log({f"{wandb_prefix}": wandb.Image(fig)})
     plt.close()
-    # plt.show()
-    # return plot
 
 
 # Taken from https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
@@ -92,6 +94,7 @@ def flatten_nested_dict(nested_dict, parent_key="", sep="."):
 
     return dict(items)
 
+
 def update_config_dict(config_dict: ml_collections.ConfigDict, run, new_vals: dict):
     config_dict.unlock()
     config_dict.update_from_flattened_dict(run.config)
@@ -102,7 +105,7 @@ def update_config_dict(config_dict: ml_collections.ConfigDict, run, new_vals: di
 
 def setup_training(wandb_run):
     """Helper function that sets up training configs and logs to wandb."""
-    if not wandb_run.config.get('use_tpu', False):
+    if not wandb_run.config.get("use_tpu", False):
         # # TF can hog GPU memory, so we hide the GPU device from it.
         # tf.config.experimental.set_visible_devices([], "GPU")
 
@@ -129,16 +132,73 @@ def setup_training(wandb_run):
         print("\n".join(map(str, jax.local_devices())))
 
 
-def W2_distance(x, y, reg = 0.01):
+def plot_samples(
+    model, log_prob_model, samples, info, target_samples=None, log_prefix=None
+):
+    if model == "nice":
+        make_grid(samples, info.im_size, n=64, wandb_prefix=f"{log_prefix}/images")
+    if model == "many_gmm":
+        plot_gmm(
+            samples,
+            log_prob_model,
+            info.loc_scaling,
+            wandb_prefix=f"{log_prefix}/samples",
+        )
+    if target_samples is not None:
+        if model == "nice":
+            make_grid(
+                target_samples, info.im_size, n=64, wandb_prefix=f"{log_prefix}/target"
+            )
+        if model == "many_gmm":
+            plot_gmm(
+                target_samples,
+                log_prob_model,
+                info.loc_scaling,
+                wandb_prefix=f"{log_prefix}/target",
+            )
+        wandb.log(
+            {
+                f"{log_prefix}/w2": W2_distance(
+                    samples[: info.n_sinkhorn, ...],
+                    target_samples[: info.n_sinkhorn, ...],
+                )
+            }
+        )
+
+
+def setup_config(wandb_config, config):
+    try:
+        if wandb_config.model == "nice":
+            config.model = (
+                wandb_config.model
+                + f"_{wandb_config.alpha}_{wandb_config.n_bits}_{wandb_config.im_size}"
+            )
+            new_vals = {}
+        elif wandb_config.model in ["funnel"]:
+            values = FUNNEL_EPS_DICT[wandb_config.nbridges]
+            new_vals = {"init_eps": values["init_eps"], "lr": values["lr"]}
+        elif wandb_config.model in ["many_gmm", "gmm"]:
+            new_vals = {}
+        else:
+            new_vals = {"lr": LR_DICT[wandb_config.model][wandb_config.boundmode]}
+            print(new_vals)
+    except KeyError:
+        new_vals = {}
+        print(
+            "LR not found for model %s and boundmode %s"
+            % (wandb_config.model, wandb_config.boundmode)
+        )
+    
+    return new_vals
+
+
+def W2_distance(x, y, reg=0.01):
     N = x.shape[0]
     x, y = np.array(x), np.array(y)
-    a,b = np.ones(N) / N, np.ones(N) / N
+    a, b = np.ones(N) / N, np.ones(N) / N
 
     M = ot.dist(x, y)
     M /= M.max()
 
-    T_reg = ot.sinkhorn2(
-        a, b, M, reg, log=False,
-        numItermax=10000, stopThr=1e-16
-    )
+    T_reg = ot.sinkhorn2(a, b, M, reg, log=False, numItermax=10000, stopThr=1e-16)
     return T_reg

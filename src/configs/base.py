@@ -1,51 +1,65 @@
-import ml_collections
 import os
 
+import ml_collections
 
 LR_DICT = {
-    "log_sonar": {"MCD_CAIS_UHA_sn": 1e-3,
-                  "MCD_CAIS_sn": 1e-3,
-                  "MCD_CAIS_var_sn": 1e-3,
-                  "MCD_U_a-lp-sn": 1e-3,
-                  "UHA": 1e-4,
-                  "MCD_ULA_sn": 1e-3,
-                  "MCD_ULA": 1e-4},
-    "log_ionosphere": {"MCD_CAIS_UHA_sn": 1e-3,
-                       "MCD_CAIS_sn": 1e-4,
-                       "MCD_U_a-lp-sn": 1e-3,
-                       "UHA": 1e-4,
-                       "MCD_ULA_sn": 1e-3,
-                       "MCD_ULA": 1e-4},
-    "lorenz": {"MCD_CAIS_UHA_sn": 1e-3,
-                "MCD_CAIS_sn": 1e-5,
-                "MCD_U_a-lp-sn": 1e-3,
-                "UHA": 1e-3,
-                "MCD_ULA_sn": 1e-5,
-                "MCD_ULA": 1e-5},
-    "brownian": {"MCD_CAIS_UHA_sn": 1e-3,
-                "MCD_CAIS_sn": 1e-3,
-                "MCD_U_a-lp-sn": 1e-3,
-                "UHA": 1e-4,
-                "MCD_ULA_sn": 1e-4,
-                "MCD_ULA": 1e-5},
-    "seeds": {"MCD_CAIS_UHA_sn": 1e-3,
-            "MCD_CAIS_sn": 1e-3,
-            "MCD_U_a-lp-sn": 1e-3,
-            "UHA": 1e-3,
-            "MCD_ULA_sn": 1e-3,
-            "MCD_ULA": 1e-4},
-    "banana": {"MCD_CAIS_UHA_sn": 1e-3,
-            "MCD_CAIS_sn": 1e-3,
-            "MCD_U_a-lp-sn": 1e-3,
-            "UHA": 1e-3,
-            "MCD_ULA_sn": 1e-3,
-            "MCD_ULA": 1e-4},
-    "lgcp": {"MCD_CAIS_UHA_sn": 1e-3,
-            "MCD_CAIS_sn": 1e-4,
-            "MCD_U_a-lp-sn": 1e-3,
-            "UHA": 1e-4,
-            "MCD_ULA_sn": 1e-4,
-            "MCD_ULA": 1e-4},
+    "log_sonar": {
+        "MCD_CAIS_UHA_sn": 1e-3,
+        "MCD_CAIS_sn": 1e-3,
+        "MCD_CAIS_var_sn": 1e-3,
+        "MCD_U_a-lp-sn": 1e-3,
+        "UHA": 1e-4,
+        "MCD_ULA_sn": 1e-3,
+        "MCD_ULA": 1e-4,
+    },
+    "log_ionosphere": {
+        "MCD_CAIS_UHA_sn": 1e-3,
+        "MCD_CAIS_sn": 1e-4,
+        "MCD_U_a-lp-sn": 1e-3,
+        "UHA": 1e-4,
+        "MCD_ULA_sn": 1e-3,
+        "MCD_ULA": 1e-4,
+    },
+    "lorenz": {
+        "MCD_CAIS_UHA_sn": 1e-3,
+        "MCD_CAIS_sn": 1e-5,
+        "MCD_U_a-lp-sn": 1e-3,
+        "UHA": 1e-3,
+        "MCD_ULA_sn": 1e-5,
+        "MCD_ULA": 1e-5,
+    },
+    "brownian": {
+        "MCD_CAIS_UHA_sn": 1e-3,
+        "MCD_CAIS_sn": 1e-3,
+        "MCD_U_a-lp-sn": 1e-3,
+        "UHA": 1e-4,
+        "MCD_ULA_sn": 1e-4,
+        "MCD_ULA": 1e-5,
+    },
+    "seeds": {
+        "MCD_CAIS_UHA_sn": 1e-3,
+        "MCD_CAIS_sn": 1e-3,
+        "MCD_U_a-lp-sn": 1e-3,
+        "UHA": 1e-3,
+        "MCD_ULA_sn": 1e-3,
+        "MCD_ULA": 1e-4,
+    },
+    "banana": {
+        "MCD_CAIS_UHA_sn": 1e-3,
+        "MCD_CAIS_sn": 1e-3,
+        "MCD_U_a-lp-sn": 1e-3,
+        "UHA": 1e-3,
+        "MCD_ULA_sn": 1e-3,
+        "MCD_ULA": 1e-4,
+    },
+    "lgcp": {
+        "MCD_CAIS_UHA_sn": 1e-3,
+        "MCD_CAIS_sn": 1e-4,
+        "MCD_U_a-lp-sn": 1e-3,
+        "UHA": 1e-4,
+        "MCD_ULA_sn": 1e-4,
+        "MCD_ULA": 1e-4,
+    },
 }
 
 FUNNEL_EPS_DICT = {
@@ -57,17 +71,21 @@ FUNNEL_EPS_DICT = {
     256: {"init_eps": 0.01, "lr": 0.005},
 }
 
+TRACTABLE_DISTS = ["nice", "funnel", "gmm", "many_gmm"]
+
+
 def get_config():
     config = ml_collections.ConfigDict()
     config.boundmode = "UHA"
     config.model = "lorenz"
-    config.N = 5 # 5 for all except NICE
+    config.N = 5  # 5 for all except NICE
     config.nbridges = 8
     config.lfsteps = 1
+    config.n_sinkhorn = 300
 
     config.init_eta = 0.0
     config.init_eps = 1e-5
-    config.init_sigma = 1.
+    config.init_sigma = 1.0
     config.pretrain_mfvi = True
 
     config.train_vi = True
@@ -78,7 +96,7 @@ def get_config():
 
     config.mfvi_iters = 150000
     config.mfvi_lr = 0.01
-    config.iters = 150000 # 150000 for all except NICE
+    config.iters = 150000  # 150000 for all except NICE
     config.lr = 0.0001
     config.seed = 1
     config.id = -1
@@ -101,7 +119,7 @@ def get_config():
 
     # LGCP configs
     config.use_whitened = False
-    
+
     # Many GMM configs
     config.gmm_easy_mode = False
     if config.gmm_easy_mode:
@@ -110,7 +128,7 @@ def get_config():
     else:
         config.n_mixes = 40
         config.loc_scaling = 40
-    
+
     cwd = os.getcwd()
     config.file_path = os.path.join(cwd, "../pines.csv")
 
