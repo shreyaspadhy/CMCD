@@ -135,7 +135,7 @@ def get_config():
     # Wandb Configs
     config.wandb = ml_collections.ConfigDict()
     config.wandb.log = True
-    config.wandb.project = "cais"
+    config.wandb.project = "cmcd"
     config.wandb.entity = "shreyaspadhy"
     config.wandb.code_dir = cwd
     config.wandb.name = ""

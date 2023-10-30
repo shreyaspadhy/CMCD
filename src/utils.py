@@ -133,7 +133,13 @@ def setup_training(wandb_run):
 
 
 def plot_samples(
-    model, log_prob_model, samples, info, target_samples=None, log_prefix=None
+    model,
+    log_prob_model,
+    samples,
+    info,
+    target_samples=None,
+    log_prefix=None,
+    ema_samples=None,
 ):
     if model == "nice":
         make_grid(samples, info.im_size, n=64, wandb_prefix=f"{log_prefix}/images")
@@ -144,6 +150,11 @@ def plot_samples(
             info.loc_scaling,
             wandb_prefix=f"{log_prefix}/samples",
         )
+    if ema_samples is not None:
+        if model == "nice":
+            make_grid(
+                ema_samples, info.im_size, n=64, wandb_prefix=f"{log_prefix}/ema_images"
+            )
     if target_samples is not None:
         if model == "nice":
             make_grid(
@@ -188,7 +199,7 @@ def setup_config(wandb_config, config):
             "LR not found for model %s and boundmode %s"
             % (wandb_config.model, wandb_config.boundmode)
         )
-    
+
     return new_vals
 
 
