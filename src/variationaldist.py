@@ -1,8 +1,8 @@
 import vardist.diag_gauss as diagvd
 
 
-def initialize(dim):
-    return diagvd.initialize(dim)
+def initialize(dim, init_sigma=1.0):
+    return diagvd.initialize(dim, init_sigma=init_sigma)
 
 
 def sample_rep(rng_key, vdparams):

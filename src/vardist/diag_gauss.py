@@ -1,6 +1,6 @@
+import jax
 import jax.numpy as np
 import numpyro.distributions as npdist
-import jax
 
 
 def encode_params(mean, logdiag):
@@ -17,9 +17,9 @@ def to_scale(logdiag):
     # return (logdiag + np.sqrt(4. + logdiag * logdiag)) / 2.
 
 
-def initialize(dim):
+def initialize(dim, init_sigma=1.0):
     mean = np.zeros(dim)
-    logdiag = np.zeros(dim)
+    logdiag = np.ones(dim) * np.log(init_sigma)
     return encode_params(mean, logdiag)
 
 

@@ -81,6 +81,7 @@ def get_config():
 
     config.init_eta = 0.0
     config.init_eps = 1e-5
+    config.init_sigma = 1.0
     config.pretrain_mfvi = True
 
     config.train_vi = True
