@@ -1,6 +1,6 @@
-import ml_collections
 import os
 
+import ml_collections
 
 LR_DICT = {
     "log_sonar": {

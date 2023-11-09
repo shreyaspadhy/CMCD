@@ -1,16 +1,14 @@
 import jax
+import jax.numpy as np
 from jax.example_libraries.stax import (
     Dense,
-    serial,
-    Softplus,
     FanInSum,
     FanOut,
     Identity,
+    Softplus,
     parallel,
+    serial,
 )
-from jax.nn.initializers import glorot_normal, normal
-from jax.nn import softplus
-import jax.numpy as np
 
 
 def initialize_embedding(rng, nbridges, emb_dim, factor=0.05):

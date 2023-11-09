@@ -2,8 +2,6 @@ import jax
 import jax.numpy as np
 import variationaldist as vd
 
-import pdb
-
 
 def evolve_overdamped_cais(
     z,
@@ -70,7 +68,7 @@ def evolve_overdamped_cais(
         aux = z_new, w, rng_key_gen
         return aux, None
 
-    print(f"running CAIS")
+    print("running CAIS")
     dim, nbridges, mode, apply_fun_sn = params_fixed
     # Evolve system
     rng_key, rng_key_gen = jax.random.split(rng_key_gen)
