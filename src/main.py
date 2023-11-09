@@ -25,6 +25,7 @@ from utils import (
 
 jax_config.update("jax_traceback_filtering", "off")
 
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
 
 ml_collections.config_flags.DEFINE_config_file(
     "config",

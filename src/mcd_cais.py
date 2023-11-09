@@ -21,7 +21,7 @@ def evolve_overdamped_cais(
             beta * log_prob_model(z) + (1.0 - beta) * vd.log_prob(params["vd"], z)
         )
 
-    def gradU(z, beta, clip=1e2):
+    def gradU(z, beta, clip=1e3):
         p = lambda z: vd.log_prob(params["vd"], z)
         gp = jax.grad(p)(z)
         u = lambda z: log_prob_model(z)
