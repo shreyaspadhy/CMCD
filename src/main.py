@@ -1,5 +1,4 @@
 import os
-import pickle
 from functools import partial
 
 import boundingmachine as bm
@@ -12,12 +11,12 @@ import opt
 import wandb
 from absl import app, flags
 from configs.base import TRACTABLE_DISTS
-from jax import scipy as jscipy
 from jax.config import config as jax_config
 from model_handler import load_model
 from utils import (
-    W2_distance,
+    calculate_W2_distances,
     flatten_nested_dict,
+    log_final_losses,
     make_grid,
     setup_config,
     setup_training,
@@ -64,13 +63,17 @@ def main(config):
 
         print(config)
 
+        # If tractable distribution, we also return sample_from_target_fn
         if config.model in TRACTABLE_DISTS:
-            log_prob_model, dim, sample_from_target_fn = load_model(config.model, config)
+            log_prob_model, dim, sample_from_target_fn = load_model(
+                config.model, config
+            )
         else:
             log_prob_model, dim = load_model(config.model, config)
             sample_from_target_fn = None
-        rng_key_gen = jax.random.PRNGKey(config.seed)
 
+        # Set up random seeds
+        rng_key_gen = jax.random.PRNGKey(config.seed)
         train_rng_key_gen, eval_rng_key_gen = jax.random.split(rng_key_gen)
 
         # Train initial variational distribution to maximize the ELBO
@@ -87,7 +90,7 @@ def main(config):
             vdparams_init = unflatten(params_flat)[0]["vd"]
         else:
             mfvi_iters = config.mfvi_iters
-            losses, _, params_flat, _ = opt.run(
+            losses, params_flat, _ = opt.run(
                 config,
                 config.mfvi_lr,
                 mfvi_iters,
@@ -99,6 +102,7 @@ def main(config):
                 trainable,
                 train_rng_key_gen,
                 log_prefix="pretrain",
+                use_ema=False,
             )
             vdparams_init = unflatten(params_flat)[0]["vd"]
 
@@ -134,7 +138,7 @@ def main(config):
             if config.train_vi:
                 trainable = trainable + ("vd",)
 
-            print(trainable)
+            print(f"Params being trained : {trainable}")
             params_flat, unflatten, params_fixed = mcdbm.initialize(
                 dim=dim,
                 nbridges=config.nbridges,
@@ -179,7 +183,7 @@ def main(config):
         else:
             target_samples = None
 
-        losses, diverged, params_flat, tracker = opt.run(
+        _, params_flat, ema_params = opt.run(
             config,
             config.lr,
             config.iters,
@@ -192,6 +196,7 @@ def main(config):
             train_rng_key_gen,
             log_prefix="train",
             target_samples=target_samples,
+            use_ema=config.use_ema,
         )
 
         eval_losses, samples = opt.sample(
@@ -207,35 +212,31 @@ def main(config):
             log_prefix="eval",
         )
 
-        # (n_input_dist_seeds, n_samples)
-        eval_losses = jnp.array(eval_losses)
-
-        # Calculate mean and std of ELBOs over 30 seeds
-        final_elbos = -jnp.mean(eval_losses, axis=1)
-        final_elbo = jnp.mean(final_elbos)
-        final_elbo_std = jnp.std(final_elbos)
-
-        # Calculate mean and std of log Zs over 30 seeds
-        ln_numsamp = jnp.log(n_samples)
-
-        final_ln_Zs = (
-            jscipy.special.logsumexp(-jnp.array(eval_losses), axis=1) - ln_numsamp
-        )
-
-        final_ln_Z = jnp.mean(final_ln_Zs)
-        final_ln_Z_std = jnp.std(final_ln_Zs)
+        final_elbo, final_ln_Z = log_final_losses(eval_losses)
 
         print("Done training, got ELBO %.2f." % final_elbo)
         print("Done training, got ln Z %.2f." % final_ln_Z)
 
-        wandb.log(
-            {
-                "elbo_final": np.array(final_elbo),
-                "final_ln_Z": np.array(final_ln_Z),
-                "elbo_final_std": np.array(final_elbo_std),
-                "final_ln_Z_std": np.array(final_ln_Z_std),
-            }
-        )
+        if config.use_ema:
+            eval_losses_ema, samples_ema = opt.sample(
+                config,
+                n_samples,
+                n_input_dist_seeds,
+                ema_params,
+                unflatten,
+                params_fixed,
+                log_prob_model,
+                loss_fn,
+                eval_rng_key_gen,
+                log_prefix="eval",
+            )
+
+            final_elbo_ema, final_ln_Z_ema = log_final_losses(
+                eval_losses_ema, log_prefix="_ema"
+            )
+
+            print("With EMA, got ELBO %.2f." % final_elbo_ema)
+            print("With EMA, got ln Z %.2f." % final_ln_Z_ema)
 
         # Plot samples
         if config.model in ["nice", "funnel", "gmm"]:
@@ -243,55 +244,52 @@ def main(config):
                 jax.random.PRNGKey(2), samples.shape[0]
             )
 
-            w2_dists, self_w2_dists = [], []
-            for i in range(n_input_dist_seeds):
-                samples_i = samples[i * n_samples: (i + 1) * n_samples, ...]
-                target_samples_i = target_samples[
-                    i * n_samples: (i + 1) * n_samples, ...
-                ]
-                other_target_samples_i = other_target_samples[
-                    i * n_samples: (i + 1) * n_samples, ...
-                ]
-                w2_dists.append(W2_distance(samples_i, target_samples_i))
-                self_w2_dists.append(
-                    W2_distance(target_samples_i, other_target_samples_i)
+            calculate_W2_distances(
+                samples,
+                target_samples,
+                other_target_samples,
+                n_samples,
+                config.n_input_dist_seeds,
+            )
+
+            if config.use_ema:
+                calculate_W2_distances(
+                    samples_ema,
+                    target_samples,
+                    other_target_samples,
+                    n_samples,
+                    config.n_input_dist_seeds,
+                    log_prefix="_ema",
                 )
 
             if config.model == "nice":
-                make_grid(samples, config.im_size, n=64, wandb_prefix="images/sample")
+                make_grid(
+                    samples, config.im_size, n=64, wandb_prefix="images/final_sample"
+                )
+                if config.use_ema:
+                    make_grid(
+                        samples_ema,
+                        config.im_size,
+                        n=64,
+                        wandb_prefix="images/final_sample_ema",
+                    )
 
-            wandb.log(
-                {
-                    "w2_dist": np.mean(np.array(w2_dists)),
-                    "w2_dist_std": np.std(np.array(w2_dists)),
-                    "self_w2_dist": np.mean(np.array(self_w2_dists)),
-                    "self_w2_dist_std": np.std(np.array(self_w2_dists)),
-                }
-            )
+        # params_train, params_notrain = unflatten(params_flat)
+        # params = {**params_train, **params_notrain}
 
-        params_train, params_notrain = unflatten(params_flat)
-        params = {**params_train, **params_notrain}
+        # if config.wandb.log_artifact:
+        #     artifact_name = f"{config.model}_{config.boundmode}_{config.nbridges}"
 
-        if config.wandb.log_artifact:
-            artifact_name = f"{config.model}_{config.boundmode}_{config.nbridges}"
+        #     artifact = wandb.Artifact(
+        #         artifact_name,
+        #         type="final params",
+        #     )
 
-            artifact = wandb.Artifact(
-                artifact_name,
-                type="nice_params",
-                metadata={
-                    **{
-                        "alpha": config.alpha,
-                        "n_bits": config.n_bits,
-                        "im_size": config.im_size,
-                    }
-                },
-            )
+        #     # Save model
+        #     with artifact.new_file("params.pkl", "wb") as f:
+        #         pickle.dump(params, f)
 
-            # Save model
-            with artifact.new_file("params.pkl", "wb") as f:
-                pickle.dump(params, f)
-
-            wandb.log_artifact(artifact)
+        #     wandb.log_artifact(artifact)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ import ot
 import wandb
 from chex import Array
 from configs.base import FUNNEL_EPS_DICT, LR_DICT
+from jax import scipy as jscipy
 
 
 def make_grid(x: Array, im_size: int, n: int = 16, wandb_prefix: str = ""):
@@ -213,3 +214,63 @@ def W2_distance(x, y, reg=0.01):
 
     T_reg = ot.sinkhorn2(a, b, M, reg, log=False, numItermax=10000, stopThr=1e-16)
     return T_reg
+
+
+def log_final_losses(eval_losses, log_prefix=""):
+    """
+    eval_losses is of shape (n_input_dist_seeds, n_samples)
+    """
+    # (n_input_dist_seeds, n_samples)
+    eval_losses = jnp.array(eval_losses)
+    n_samples = eval_losses.shape[1]
+    # Calculate mean and std of ELBOs over 30 seeds
+    final_elbos = -jnp.mean(eval_losses, axis=1)
+    final_elbo = jnp.mean(final_elbos)
+    final_elbo_std = jnp.std(final_elbos)
+
+    # Calculate mean and std of log Zs over 30 seeds
+    ln_numsamp = jnp.log(n_samples)
+
+    final_ln_Zs = jscipy.special.logsumexp(-jnp.array(eval_losses), axis=1) - ln_numsamp
+
+    final_ln_Z = jnp.mean(final_ln_Zs)
+    final_ln_Z_std = jnp.std(final_ln_Zs)
+
+    wandb.log(
+        {
+            f"elbo_final{log_prefix}": np.array(final_elbo),
+            f"final_ln_Z{log_prefix}": np.array(final_ln_Z),
+            f"elbo_final_std{log_prefix}": np.array(final_elbo_std),
+            f"final_ln_Z_std{log_prefix}": np.array(final_ln_Z_std),
+        }
+    )
+
+    return final_elbo, final_ln_Z
+
+
+def calculate_W2_distances(
+    samples,
+    target_samples,
+    other_target_samples,
+    n_samples,
+    n_input_dist_seeds,
+    log_prefix="",
+):
+    w2_dists, self_w2_dists = [], []
+    for i in range(n_input_dist_seeds):
+        samples_i = samples[i * n_samples : (i + 1) * n_samples, ...]
+        target_samples_i = target_samples[i * n_samples : (i + 1) * n_samples, ...]
+        other_target_samples_i = other_target_samples[
+            i * n_samples : (i + 1) * n_samples, ...
+        ]
+        w2_dists.append(W2_distance(samples_i, target_samples_i))
+        self_w2_dists.append(W2_distance(target_samples_i, other_target_samples_i))
+
+    wandb.log(
+        {
+            f"w2_dist{log_prefix}": np.mean(np.array(w2_dists)),
+            f"w2_dist_std{log_prefix}": np.std(np.array(w2_dists)),
+            f"self_w2_dist{log_prefix}": np.mean(np.array(self_w2_dists)),
+            f"self_w2_dist_std{log_prefix}": np.std(np.array(self_w2_dists)),
+        }
+    )

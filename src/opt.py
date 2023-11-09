@@ -65,22 +65,15 @@ def run(
     extra=True,
     log_prefix="",
     target_samples=None,
+    use_ema=False,
 ):
     # opt_init, update, get_params = adam(lr)
     optimizer = create_optimizer(lr, trainable=trainable)
 
     opt_state = optimizer.init(params_flat)
-    ema_params = deepcopy(params_flat)
-    # train_step = jax.jit(train_step, static_argnums=(3,))
-    # update = jax.jit(update, static_argnums=(3, 4))
-    # opt_state = opt_init(params_flat)
-
-    # Initialise EMA params
-    # ema_params_flat = jax.tree_map(lambda x: x * 0.0, params_flat)
-    # ema_step_size = info.ema_step_size
+    ema_params = deepcopy(params_flat) if use_ema else None
 
     losses = []
-    tracker = {"eps": [], "gamma": []}
     looper = tqdm(range(iters)) if info.run_cluster == 0 else range(iters)
 
     for i in looper:
@@ -92,12 +85,15 @@ def run(
             seeds, params_flat, unflatten, params_fixed, log_prob_model
         )
 
-        _, (ema_loss, z_ema) = grad_and_loss(
-            seeds, ema_params, unflatten, params_fixed, log_prob_model
-        )
+        if use_ema:
+            _, (ema_loss, z_ema) = grad_and_loss(
+                seeds, ema_params, unflatten, params_fixed, log_prob_model
+            )
+        else:
+            ema_loss, z_ema = None, None
 
         # Log samples every 1% of training steps.
-        if "pretrain" not in log_prefix and i % (iters // 1000) == 0:
+        if "pretrain" not in log_prefix and i % max(iters // 100, 1) == 0:
             plot_samples(
                 info.model,
                 log_prob_model,
@@ -112,30 +108,24 @@ def run(
 
         if jnp.isnan(jnp.mean(loss)):
             print("Diverged")
-            return [], True, params_flat, tracker
+            return params_flat, ema_params
 
         updates, opt_state = optimizer.update(grad, opt_state, params_flat)
         params_flat = optax.apply_updates(params_flat, updates)
         params_flat = project(params_flat, unflatten, trainable)
-        ema_params = optax.incremental_update(params_flat, ema_params, step_size=0.001)
-
-        # opt_state = update(i, grad, opt_state, unflatten, trainable)
-        # new_params_flat = get_params(opt_state)
-        # ema_params_flat = jax.tree_map(
-        #     lambda x, y: 0.999 * x + 0.001 * y, ema_params_flat, new_params_flat
-        # )
+        if use_ema:
+            ema_params = optax.incremental_update(
+                params_flat, ema_params, step_size=0.001
+            )
 
         # Log scalar metrics every 0.1% of training steps.
-        if i % (iters // 1000) == 0:
+        if i % max(iters // 1000, 1) == 0:
             # Convert to np array to prevent memory buildup after lots of training steps.
             loss, grad = np.array(loss), np.array(grad)
-            ema_loss = np.array(ema_loss)
             log_dict = {
                 f"{log_prefix}/loss": np.mean(loss),
-                f"{log_prefix}/ema_loss": np.mean(ema_loss),
                 f"{log_prefix}/grad": np.mean(grad),
                 f"{log_prefix}/var_loss": np.var(loss, ddof=1),
-                f"{log_prefix}/ema_var_loss": np.var(ema_loss, ddof=1),
                 f"{log_prefix}/eps": np.array(
                     collect_eps(params_flat, unflatten, trainable)
                 ),
@@ -146,8 +136,16 @@ def run(
             }
 
             wandb.log(log_dict)
+            if use_ema:
+                ema_loss = np.array(ema_loss)
+                ema_log_dict = {
+                    f"{log_prefix}/ema_loss": np.mean(ema_loss),
+                    f"{log_prefix}/ema_var_loss": np.var(ema_loss, ddof=1),
+                    "train_step": i,
+                }
+                wandb.log(ema_log_dict)
             losses.append(np.mean(loss))
-    return losses, False, params_flat, tracker
+    return losses, params_flat, ema_params
 
 
 def sample(

@@ -106,6 +106,8 @@ def get_config():
     config.emb_dim = 20
     config.nlayers = 3
 
+    config.use_ema = False
+
     # NICE Config/
     config.im_size = 14
     config.alpha = 0.05
