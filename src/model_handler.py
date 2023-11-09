@@ -1,29 +1,23 @@
-from jax import grad, vmap
-import jax.numpy as np
-import numpy as onp
-import jax.random as jr
-import jax.scipy.linalg as slinalg
-import jax
-import numpyro
-from jax.flatten_util import ravel_pytree
-import numpyro.distributions as npdists
-import models.logistic_regression as model_lr
-import models.seeds as model_seeds
-import inference_gym.using_jax as gym
-import wandb
 import pickle
-import haiku as hk
-from nice import NICE
-import chex
-
-from jax.scipy.special import logsumexp
-from jax.scipy.stats import multivariate_normal
-from jax.scipy.stats import norm
 from typing import Any
 
 import cp_utils
+import haiku as hk
+import inference_gym.using_jax as gym
+import jax
+import jax.numpy as np
+import jax.random as jr
+import jax.scipy.linalg as slinalg
+import models.logistic_regression as model_lr
+import models.seeds as model_seeds
+import numpy as onp
+import numpyro
+import wandb
 from annealed_flow_transport.densities import LogDensity
-
+from jax.flatten_util import ravel_pytree
+from jax.scipy.special import logsumexp
+from jax.scipy.stats import multivariate_normal, norm
+from nice import NICE
 
 # TypeDefs
 Array = np.ndarray
@@ -233,7 +227,6 @@ class ChallengingTwoDimensionalMixture(LogDensity):
 
 def load_model_gmm(model="gmm", config=None):
     gmm = ChallengingTwoDimensionalMixture(config, num_dim=2)
-
     # log_density_fn = lambda x: np.squeeze(gmm.evaluate_log_density(x[None, :]))
 
     # x = np.array([0., 0.])

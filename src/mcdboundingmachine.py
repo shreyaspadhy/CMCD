@@ -1,10 +1,8 @@
-import jax.numpy as np
 import jax
-import variationaldist as vd
-import momdist as md
-from jax.flatten_util import ravel_pytree
-import functools
+import jax.numpy as np
 import mcd_utils
+import variationaldist as vd
+from jax.flatten_util import ravel_pytree
 from nn import initialize_mcd_network
 
 
@@ -43,7 +41,6 @@ def initialize(
         params_notrain["vd"] = vdparams
         if vdparams is None:
             params_notrain["vd"] = vd.initialize(dim)
-
     if "eps" in trainable:
         params_train["eps"] = eps
     else:
