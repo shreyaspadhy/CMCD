@@ -1,24 +1,19 @@
-import datetime
 import functools
 import os
-from typing import Sequence
+import pickle
 
-from absl import app, flags
-from absl import logging
 import haiku as hk
 import jax
 import jax.numpy as jnp
-from ml_collections import config_flags
+import numpy as np
 import optax
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from nice import NICE
-import os
-from utils import flatten_nested_dict, update_config_dict, setup_training, make_grid
 import wandb
-import numpy as np
-import pickle
-
+from absl import app, flags
+from ml_collections import config_flags
+from nice import NICE
+from utils import flatten_nested_dict, make_grid, setup_training, update_config_dict
 
 config_flags.DEFINE_config_file("config", ("nice_config.py"), "Run configuration.")
 FLAGS = flags.FLAGS

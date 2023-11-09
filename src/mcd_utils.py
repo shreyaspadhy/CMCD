@@ -1,15 +1,11 @@
 import jax
-import jax.numpy as np
 import numpyro.distributions as npdist
-import variationaldist as vd
-import momdist as md
+from mcd_cais import evolve_overdamped_cais
 from mcd_over_orig import evolve_overdamped_orig
-from mcd_under_me_e import evolve_underdamped_me_e
-from mcd_under_lp_e import evolve_underdamped_lp_e
 from mcd_under_lp_a import evolve_underdamped_lp_a
 from mcd_under_lp_a_cais import evolve_underdamped_lp_a_cais
+from mcd_under_lp_e import evolve_underdamped_lp_e
 from mcd_under_lp_ea import evolve_underdamped_lp_ea
-from mcd_cais import evolve_overdamped_cais
 
 
 # For transition kernel

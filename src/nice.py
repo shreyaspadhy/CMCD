@@ -9,7 +9,6 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 
-
 Array = jax.Array
 
 

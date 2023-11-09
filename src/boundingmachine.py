@@ -1,10 +1,9 @@
-import jax.numpy as np
-import jax
-import variationaldist as vd
-import momdist as md
-from jax.flatten_util import ravel_pytree
-import functools
 import ais_utils
+import jax
+import jax.numpy as np
+import momdist as md
+import variationaldist as vd
+from jax.flatten_util import ravel_pytree
 
 
 def initialize(

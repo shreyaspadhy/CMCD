@@ -1,5 +1,6 @@
-import ml_collections
 import os
+
+import ml_collections
 
 
 def get_config():

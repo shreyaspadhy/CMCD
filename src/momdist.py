@@ -1,7 +1,6 @@
+import jax
 import jax.numpy as np
 import numpyro.distributions as npdist
-import jax
-
 
 # For now, only diagonal
 

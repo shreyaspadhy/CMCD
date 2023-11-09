@@ -1,8 +1,7 @@
-import variationaldist as vd
-import momdist as md
 import jax
 import jax.numpy as np
-import numpyro.distributions as npdist
+import momdist as md
+import variationaldist as vd
 
 
 def evolve(z, betas, params, rng_key_gen, params_fixed, log_prob):
