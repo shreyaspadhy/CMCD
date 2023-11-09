@@ -3,9 +3,20 @@ import jax.numpy as np
 import variationaldist as vd
 
 
-def evolve_underdamped_me_e(z, betas, params, rng_key_gen, params_fixed, log_prob_model, sample_kernel, log_prob_kernel):
+def evolve_underdamped_me_e(
+    z,
+    betas,
+    params,
+    rng_key_gen,
+    params_fixed,
+    log_prob_model,
+    sample_kernel,
+    log_prob_kernel,
+):
     def U(z, beta):
-        return -1. * (beta * log_prob_model(z) + (1. - beta) * vd.log_prob(params["vd"], z))
+        return -1.0 * (
+            beta * log_prob_model(z) + (1.0 - beta) * vd.log_prob(params["vd"], z)
+        )
 
     def evolve(aux, i):
         z, rho, w, rng_key_gen = aux
@@ -13,7 +24,7 @@ def evolve_underdamped_me_e(z, betas, params, rng_key_gen, params_fixed, log_pro
 
         # Forward kernel
         fk_rho_mean = params["eta"] * rho
-        scale = np.sqrt(1. - params["eta"] ** 2)
+        scale = np.sqrt(1.0 - params["eta"] ** 2)
 
         rng_key, rng_key_gen = jax.random.split(rng_key_gen)
         rho_prime = sample_kernel(rng_key, fk_rho_mean, scale)
@@ -22,7 +33,9 @@ def evolve_underdamped_me_e(z, betas, params, rng_key_gen, params_fixed, log_pro
         z_new = z + params["eps"] * rho_new
 
         # Backwards kernel
-        bk_rho_mean = params["eta"] * rho_prime + 2 * apply_fun_sn(params["sn"], z, i) # * (1. - params["eta"])
+        bk_rho_mean = params["eta"] * rho_prime + 2 * apply_fun_sn(
+            params["sn"], z, i
+        )  # * (1. - params["eta"])
         # bk_rho_mean = params["eta"] * rho_prime
 
         # Evaluate kernels
@@ -39,11 +52,11 @@ def evolve_underdamped_me_e(z, betas, params, rng_key_gen, params_fixed, log_pro
     dim, nbridges, damped, use_sn, apply_fun_sn = params_fixed
     # Sample initial momentum
     rng_key, rng_key_gen = jax.random.split(rng_key_gen)
-    rho = jax.random.normal(rng_key, shape = (z.shape[0],)) # (dim,)
+    rho = jax.random.normal(rng_key, shape=(z.shape[0],))  # (dim,)
 
     # Add initial momentum term to w
-    w = 0.
-    w = w - log_prob_kernel(rho, np.zeros(z.shape[0]), 1.)
+    w = 0.0
+    w = w - log_prob_kernel(rho, np.zeros(z.shape[0]), 1.0)
 
     # Evolve system
     rng_key, rng_key_gen = jax.random.split(rng_key_gen)
@@ -52,6 +65,6 @@ def evolve_underdamped_me_e(z, betas, params, rng_key_gen, params_fixed, log_pro
     z, rho, w, _ = aux
 
     # Add final momentum term to w
-    w = w + log_prob_kernel(rho, np.zeros(z.shape[0]), 1.)
-    
+    w = w + log_prob_kernel(rho, np.zeros(z.shape[0]), 1.0)
+
     return z, w, None
