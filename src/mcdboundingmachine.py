@@ -18,6 +18,7 @@ def initialize(
     trainable=["eps"],
     use_score_nn=True,
     emb_dim=20,
+    nlayers=3,
     seed=1,
     mode="MCD_U_lp-e",
 ):
@@ -58,7 +59,7 @@ def initialize(
 
     if mode in ["MCD_ULA_sn", "MCD_U_e-lp-sna", "MCD_U_a-lp-sna", "MCD_CAIS_sn"]:
         init_fun_sn, apply_fun_sn = initialize_mcd_network(
-            dim, emb_dim, nbridges, nlayers=3
+            dim, emb_dim, nbridges, nlayers=nlayers
         )
         params_train["sn"] = init_fun_sn(jax.random.PRNGKey(seed), None)[1]
     elif mode in [
@@ -68,7 +69,7 @@ def initialize(
         "MCD_CAIS_UHA_sn",
     ]:
         init_fun_sn, apply_fun_sn = initialize_mcd_network(
-            dim, emb_dim, nbridges, rho_dim=dim, nlayers=3
+            dim, emb_dim, nbridges, rho_dim=dim, nlayers=nlayers
         )
         params_train["sn"] = init_fun_sn(jax.random.PRNGKey(seed), None)[1]
     else:

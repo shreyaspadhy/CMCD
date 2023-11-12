@@ -79,6 +79,9 @@ def get_config():
     config.nbridges = 8
     config.lfsteps = 1
 
+    config.emb_dim = 20
+    config.nlayers = 3
+
     config.init_eta = 0.0
     config.init_eps = 1e-5
     config.init_sigma = 1.0

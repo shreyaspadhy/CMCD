@@ -161,6 +161,8 @@ def main(config):
                 eps=config.init_eps,
                 trainable=trainable,
                 mode=config.boundmode,
+                emb_dim=config.emb_dim,
+                nlayers=config.nlayers,
             )
             grad_and_loss = jax.jit(
                 jax.grad(mcdbm.compute_bound, 1, has_aux=True), static_argnums=(2, 3, 4)
