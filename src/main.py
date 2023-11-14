@@ -45,6 +45,7 @@ FLAGS = flags.FLAGS
 #   - CAIS uses MCD_CAIS_sn
 #   - CAIS_UHA uses MCD_CAIS_UHA_sn
 #   - CAIS_var uses MCD_CAIS_var_sn
+#   - DNF uses MCD_DNF
 
 
 def main(config):

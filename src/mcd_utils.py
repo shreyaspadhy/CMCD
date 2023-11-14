@@ -7,6 +7,7 @@ from mcd_under_lp_a import evolve_underdamped_lp_a
 from mcd_under_lp_a_cais import evolve_underdamped_lp_a_cais
 from mcd_under_lp_e import evolve_underdamped_lp_e
 from mcd_under_lp_ea import evolve_underdamped_lp_ea
+from vi_dnf import evolve_overdamped_dnf
 
 
 # For transition kernel
@@ -157,6 +158,18 @@ def evolve(
             use_sn=True,
             beta_schedule=beta_schedule,
             grad_clipping=grad_clipping,
+        )
+    elif mode == "MCD_DNF":
+        return evolve_overdamped_dnf(
+            z,
+            betas,
+            params,
+            rng_key_gen,
+            params_fixed,
+            log_prob_model,
+            sample_kernel,
+            log_prob_kernel,
+            use_sn=True,
         )
     elif mode == "MCD_CAIS_UHA_sn":
         return evolve_underdamped_lp_a_cais(
