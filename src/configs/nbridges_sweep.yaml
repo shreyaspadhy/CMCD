@@ -5,12 +5,25 @@ program: main.py
 method: grid
 parameters:
   boundmode:
-    values: ['MCD_ULA', 'MCD_ULA_sn', 'UHA', 'MCD_U_a-lp-sn', 'MCD_CAIS_sn', 'MCD_CAIS_UHA_sn']
+    values: ['MCD_CAIS_sn']
   model:
     # values: ['log_sonar', 'log_ionosphere', 'lorenz', 'brownian', 'banana', 'seeds']
-    values: ['lgcp']
+    values: ['funnel']
   nbridges:
     values: [256, 128, 64, 32, 16, 8]
+  N:
+    values: [300]
+  iters:
+    values: [11000]
+  pretrain_mfvi:
+    values: [False]
+  train_eps:
+    values: [False]
+  emb_dim:
+    values: [48]
+  n_samples:
+    values: [2000]
+  
 
 command:
   - python

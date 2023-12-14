@@ -6,6 +6,7 @@ LR_DICT = {
     "log_sonar": {
         "MCD_CAIS_UHA_sn": 1e-3,
         "MCD_CAIS_sn": 1e-3,
+        "MCD_CAIS_var_sn": 1e-3,
         "MCD_U_a-lp-sn": 1e-3,
         "UHA": 1e-4,
         "MCD_ULA_sn": 1e-3,
@@ -70,6 +71,8 @@ FUNNEL_EPS_DICT = {
     256: {"init_eps": 0.01, "lr": 0.005},
 }
 
+TRACTABLE_DISTS = ["nice", "funnel", "gmm", "many_gmm"]
+
 
 def get_config():
     config = ml_collections.ConfigDict()
@@ -78,6 +81,7 @@ def get_config():
     config.N = 5  # 5 for all except NICE
     config.nbridges = 8
     config.lfsteps = 1
+    config.n_sinkhorn = 300
 
     config.emb_dim = 20
     config.nlayers = 3
@@ -90,6 +94,9 @@ def get_config():
     config.train_vi = True
     config.train_eps = True
 
+    config.beta_schedule = ""
+    config.grad_clipping = False
+
     config.mfvi_iters = 150000
     config.mfvi_lr = 0.01
     config.iters = 150000  # 150000 for all except NICE
@@ -98,7 +105,12 @@ def get_config():
     config.id = -1
     config.run_cluster = 0
     config.n_samples = 500
+    config.n_sinkhorn = 300
     config.n_input_dist_seeds = 30
+    config.emb_dim = 20
+    config.nlayers = 3
+
+    config.use_ema = False
 
     # NICE Config/
     config.im_size = 14
@@ -114,13 +126,22 @@ def get_config():
     # LGCP configs
     config.use_whitened = False
 
+    # Many GMM configs
+    config.gmm_easy_mode = False
+    if config.gmm_easy_mode:
+        config.n_mixes = 4
+        config.loc_scaling = 10
+    else:
+        config.n_mixes = 40
+        config.loc_scaling = 40
+
     cwd = os.getcwd()
     config.file_path = os.path.join(cwd, "../pines.csv")
 
     # Wandb Configs
     config.wandb = ml_collections.ConfigDict()
     config.wandb.log = True
-    config.wandb.project = "cais"
+    config.wandb.project = "final_cmcd"
     config.wandb.entity = "shreyaspadhy"
     config.wandb.code_dir = cwd
     config.wandb.name = ""

@@ -1,11 +1,13 @@
 import jax
 import numpyro.distributions as npdist
 from mcd_cais import evolve_overdamped_cais
+from mcd_cais_var import evolve_overdamped_var_cais
 from mcd_over_orig import evolve_overdamped_orig
 from mcd_under_lp_a import evolve_underdamped_lp_a
 from mcd_under_lp_a_cais import evolve_underdamped_lp_a_cais
 from mcd_under_lp_e import evolve_underdamped_lp_e
 from mcd_under_lp_ea import evolve_underdamped_lp_ea
+from vi_dnf import evolve_overdamped_dnf
 
 
 # For transition kernel
@@ -19,7 +21,16 @@ def log_prob_kernel(x, mean, scale):
     return dist.log_prob(x)
 
 
-def evolve(z, betas, params, rng_key_gen, params_fixed, log_prob_model):
+def evolve(
+    z,
+    betas,
+    params,
+    rng_key_gen,
+    params_fixed,
+    log_prob_model,
+    beta_schedule=None,
+    grad_clipping=False,
+):
     mode = params_fixed[2]
     if mode == "MCD_ULA":
         return evolve_overdamped_orig(
@@ -131,6 +142,34 @@ def evolve(z, betas, params, rng_key_gen, params_fixed, log_prob_model):
             sample_kernel,
             log_prob_kernel,
             use_sn=True,
+            beta_schedule=beta_schedule,
+            grad_clipping=grad_clipping,
+        )
+    elif mode == "MCD_CAIS_var_sn":
+        return evolve_overdamped_var_cais(
+            z,
+            betas,
+            params,
+            rng_key_gen,
+            params_fixed,
+            log_prob_model,
+            sample_kernel,
+            log_prob_kernel,
+            use_sn=True,
+            beta_schedule=beta_schedule,
+            grad_clipping=grad_clipping,
+        )
+    elif mode == "MCD_DNF":
+        return evolve_overdamped_dnf(
+            z,
+            betas,
+            params,
+            rng_key_gen,
+            params_fixed,
+            log_prob_model,
+            sample_kernel,
+            log_prob_kernel,
+            use_sn=True,
         )
     elif mode == "MCD_CAIS_UHA_sn":
         return evolve_underdamped_lp_a_cais(
@@ -144,6 +183,8 @@ def evolve(z, betas, params, rng_key_gen, params_fixed, log_prob_model):
             log_prob_kernel,
             use_sn=True,
             full_sn=True,
+            beta_schedule=beta_schedule,
+            grad_clipping=grad_clipping,
         )
     else:
         raise NotImplementedError("Mode not implemented.")

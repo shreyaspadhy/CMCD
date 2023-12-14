@@ -1,6 +1,5 @@
 import jax
 import jax.numpy as np
-import variationaldist as vd
 
 
 def evolve_overdamped_dnf(
@@ -33,7 +32,7 @@ def evolve_overdamped_dnf(
 
         # Forward kernel
         # 		fk_mean = z - params["eps"] * jax.grad(U)(z, beta) - params["eps"] * apply_fun_sn(params["sn"], z, i) # - because it is gradient of U = -log \pi
-        uf = 0 #gradU(z, beta) if stable else jax.grad(U)(z, beta)
+        uf = 0  # gradU(z, beta) if stable else jax.grad(U)(z, beta)
         fk_mean = (
             z - params["eps"] * uf - params["eps"] * apply_fun_sn(params["sn"], z, i)
         )
@@ -46,7 +45,7 @@ def evolve_overdamped_dnf(
 
         # Backwards kernel
         # ub = jax.grad(U)(z_new, beta)
-        ub = 0  #  gradU(z_new, beta) if stable else jax.grad(U)(z_new, beta)
+        ub = 0  # gradU(z_new, beta) if stable else jax.grad(U)(z_new, beta)
         if not use_sn:
             bk_mean = (
                 z_new - params["eps"] * ub

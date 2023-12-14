@@ -77,7 +77,7 @@ def evolve_underdamped_lp_a(
     aux, _ = jax.lax.scan(evolve, aux, np.arange(nbridges))
 
     # for i in range(nbridges):
-    # 	aux, _ = evolve(aux, i)
+    #     aux, _ = evolve(aux, i)
 
     z, rho, w, _ = aux
 

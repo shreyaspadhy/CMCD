@@ -2,6 +2,7 @@ import pickle
 from typing import Any
 
 import cp_utils
+import distrax
 import haiku as hk
 import inference_gym.using_jax as gym
 import jax
@@ -35,14 +36,16 @@ def load_model(model="log_sonar", config=None):
         return load_model_funnel(model, config)
     if "lgcp" in model:
         return load_model_lgcp(model, config)
-    if "gmm" in model:
-        return load_model_gmm(model, config)
-
+    if "many_gmm" in model:
+        return load_model_manygmm(model, config)
+    # if 'gmm' in model:
+    #   return load_model_gmm(model, config)
     return load_model_other(model)
 
 
 def load_model_gym(model="banana"):
     def log_prob_model(z):
+        print(f"z shape: {z.shape}")
         x = target.default_event_space_bijector(z)
         return target.unnormalized_log_prob(
             x
@@ -226,13 +229,56 @@ class ChallengingTwoDimensionalMixture(LogDensity):
 
 
 def load_model_gmm(model="gmm", config=None):
-    gmm = ChallengingTwoDimensionalMixture(config, num_dim=2)
+    gmm = ChallengingTwoDimensionalMixture(config, sample_shape=(2,))
+
     # log_density_fn = lambda x: np.squeeze(gmm.evaluate_log_density(x[None, :]))
 
     # x = np.array([0., 0.])
     # print(x.shape)
     # print(gmm.evaluate_log_density(np.array([0., 0.])))
     return gmm.evaluate_log_density, 2, gmm.sample
+
+
+def load_model_manygmm(model="many_gmm", config=None):
+    gmm = GMM(dim=2, n_mixes=config.n_mixes, loc_scaling=config.loc_scaling)
+
+    return gmm.log_prob, 2, gmm.sample
+
+
+class GMM:
+    def __init__(self, dim, n_mixes, loc_scaling, log_var_scaling=0.1, seed=0):
+        self.seed = seed
+        self.n_mixes = n_mixes
+        self.dim = dim
+        key = jax.random.PRNGKey(seed)
+        logits = np.ones(n_mixes)
+        mean = (
+            jax.random.uniform(shape=(n_mixes, dim), key=key, minval=-1.0, maxval=1.0)
+            * loc_scaling
+        )
+        log_var = np.ones(shape=(n_mixes, dim)) * log_var_scaling
+
+        mixture_dist = distrax.Categorical(logits=logits)
+        var = jax.nn.softplus(log_var)
+        components_dist = distrax.Independent(
+            distrax.Normal(loc=mean, scale=var), reinterpreted_batch_ndims=1
+        )
+        self.distribution = distrax.MixtureSameFamily(
+            mixture_distribution=mixture_dist,
+            components_distribution=components_dist,
+        )
+
+    def log_prob(self, x):
+        log_prob = self.distribution.log_prob(x)
+
+        # Can have numerical instabilities once log prob is very small. Manually override to prevent this.
+        # This will cause the flow will ignore regions with less than 1e-4 probability under the target.
+        valid_log_prob = log_prob > -1e4
+        log_prob = np.where(valid_log_prob, log_prob, -np.inf * np.ones_like(log_prob))
+        return log_prob
+
+    def sample(self, seed, sample_shape):
+        return self.distribution.sample(seed=seed, sample_shape=sample_shape)
 
 
 class LogGaussianCoxPines(LogDensity):

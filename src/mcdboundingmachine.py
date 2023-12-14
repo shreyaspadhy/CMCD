@@ -1,5 +1,5 @@
 import jax
-import jax.numpy as np
+import jax.numpy as jnp
 import mcd_utils
 import variationaldist as vd
 from jax.flatten_util import ravel_pytree
@@ -17,19 +17,19 @@ def initialize(
     mgridref_y=None,
     trainable=["eps"],
     use_score_nn=True,
-    emb_dim=20,
+    emb_dim=48,
     nlayers=3,
     seed=1,
     mode="MCD_U_lp-e",
 ):
     """
     Modes allowed:
-            - MCD_ULA: This is ULA. Method from Thin et al.
-            - MCD_ULA_sn: This is MCD. Method from Doucet et al.
-            - MCD_U_a-lp: UHA but with approximate sampling of momentum (no score network).
-            - MCD_U_a-lp-sn: Approximate sampling of momentum, followed by leapfrog, using score network(x, rho) for backward sampling.
-            - MCD_CAIS_sn: CAIS with trainable SN.
-    - MCD_CAIS_UHA_sn: CAIS underdampened with trainable SN.
+        - MCD_ULA: This is ULA. Method from Thin et al.
+        - MCD_ULA_sn: This is MCD. Method from Doucet et al.
+        - MCD_U_a-lp: UHA but with approximate sampling of momentum (no score network).
+        - MCD_U_a-lp-sn: Approximate sampling of momentum, followed by leapfrog, using score network(x, rho) for backward sampling.
+        - MCD_CAIS_sn: CAIS with trainable SN.
+        - MCD_CAIS_UHA_sn: CAIS underdampened with trainable SN.
     """
     params_train = {}  # Has all trainable parameters
     params_notrain = {}  # Non trainable parameters
@@ -42,6 +42,7 @@ def initialize(
         params_notrain["vd"] = vdparams
         if vdparams is None:
             params_notrain["vd"] = vd.initialize(dim)
+
     if "eps" in trainable:
         params_train["eps"] = eps
     else:
@@ -57,7 +58,13 @@ def initialize(
     else:
         params_notrain["eta"] = eta
 
-    if mode in ["MCD_ULA_sn", "MCD_U_e-lp-sna", "MCD_U_a-lp-sna", "MCD_CAIS_sn"]:
+    if mode in [
+        "MCD_ULA_sn",
+        "MCD_U_e-lp-sna",
+        "MCD_U_a-lp-sna",
+        "MCD_CAIS_sn",
+        "MCD_CAIS_var_sn",
+    ]:
         init_fun_sn, apply_fun_sn = initialize_mcd_network(
             dim, emb_dim, nbridges, nlayers=nlayers
         )
@@ -82,9 +89,9 @@ def initialize(
     else:
         if nbridges < ngridb:
             ngridb = nbridges
-        mgridref_y = np.ones(ngridb + 1) * 1.0
-    params_notrain["gridref_x"] = np.linspace(0, 1, ngridb + 2)
-    params_notrain["target_x"] = np.linspace(0, 1, nbridges + 2)[1:-1]
+        mgridref_y = jnp.ones(ngridb + 1) * 1.0
+    params_notrain["gridref_x"] = jnp.linspace(0, 1, ngridb + 2)
+    params_notrain["target_x"] = jnp.linspace(0, 1, nbridges + 2)[1:-1]
     if "mgridref_y" in trainable:
         params_train["mgridref_y"] = mgridref_y
     else:
@@ -96,16 +103,24 @@ def initialize(
     return params_flat, unflatten, params_fixed
 
 
-def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob):
+def compute_ratio(
+    seed,
+    params_flat,
+    unflatten,
+    params_fixed,
+    log_prob,
+    beta_schedule=None,
+    grad_clipping=False,
+):
     params_train, params_notrain = unflatten(params_flat)
     params_notrain = jax.lax.stop_gradient(params_notrain)
     params = {**params_train, **params_notrain}  # Gets all parameters in single place
     dim, nbridges, _, _ = params_fixed
 
     if nbridges >= 1:
-        gridref_y = np.cumsum(params["mgridref_y"]) / np.sum(params["mgridref_y"])
-        gridref_y = np.concatenate([np.array([0.0]), gridref_y])
-        betas = np.interp(params["target_x"], params["gridref_x"], gridref_y)
+        gridref_y = jnp.cumsum(params["mgridref_y"]) / jnp.sum(params["mgridref_y"])
+        gridref_y = jnp.concatenate([jnp.array([0.0]), gridref_y])
+        betas = jnp.interp(params["target_x"], params["gridref_x"], gridref_y)
 
     rng_key_gen = jax.random.PRNGKey(seed)
 
@@ -114,12 +129,20 @@ def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob):
     w = -vd.log_prob(params["vd"], z)
 
     # Evolve UHA and update weight
-    delta_H = np.array([0.0])
+    delta_H = jnp.array([0.0])
     if nbridges >= 1:
         rng_key, rng_key_gen = jax.random.split(rng_key_gen)
         z, w_mom, _ = mcd_utils.evolve(
-            z, betas, params, rng_key, params_fixed, log_prob
+            z,
+            betas,
+            params,
+            rng_key,
+            params_fixed,
+            log_prob,
+            beta_schedule=beta_schedule,
+            grad_clipping=grad_clipping,
         )
+        #         jax.debug.breakpoint()
         w += w_mom
 
     # Update weight with final model evaluation
@@ -128,9 +151,49 @@ def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob):
 
 
 # @functools.partial(jax.jit, static_argnums = (2, 3, 4))
-def compute_bound(seeds, params_flat, unflatten, params_fixed, log_prob):
-    ratios, (z, _) = jax.vmap(compute_ratio, in_axes=(0, None, None, None, None))(
-        seeds, params_flat, unflatten, params_fixed, log_prob
+def compute_bound(
+    seeds,
+    params_flat,
+    unflatten,
+    params_fixed,
+    log_prob,
+    beta_schedule=None,
+    grad_clipping=False,
+):
+    ratios, (z, _) = jax.vmap(
+        compute_ratio, in_axes=(0, None, None, None, None, None, None)
+    )(
+        seeds,
+        params_flat,
+        unflatten,
+        params_fixed,
+        log_prob,
+        beta_schedule,
+        grad_clipping,
     )
     # ratios, (z, _) = compute_ratio(seeds[0], params_flat, unflatten, params_fixed, log_prob)
     return ratios.mean(), (ratios, z)
+
+
+def compute_bound_var(
+    seeds,
+    params_flat,
+    unflatten,
+    params_fixed,
+    log_prob,
+    beta_schedule=None,
+    grad_clipping=False,
+):
+    ratios, (z, _) = jax.vmap(
+        compute_ratio, in_axes=(0, None, None, None, None, None, None)
+    )(
+        seeds,
+        params_flat,
+        unflatten,
+        params_fixed,
+        log_prob,
+        beta_schedule,
+        grad_clipping,
+    )
+
+    return jnp.clip(ratios.var(ddof=0), -1e7, 1e7), (ratios, z)

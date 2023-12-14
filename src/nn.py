@@ -46,3 +46,12 @@ def initialize_mcd_network(x_dim, emb_dim, nbridges, rho_dim=0, nlayers=4):
         return apply_fun_nn(params["nn"], input_all) * params["factor_sn"]  # (x_dim,)
 
     return init_fun, apply_fun
+
+    def apply_fun(params, inputs, i, **kwargs):
+        # inputs has size (x_dim)
+        emb = params["emb"][i, :]  # (emb_dim,)
+        input_all = np.concatenate([inputs, emb])
+        return apply_fun_nn(params["nn"], input_all) * params["factor_sn"]  # (x_dim,)
+
+
+# Define a simple UNet architecture to use as the score network for NICE.
