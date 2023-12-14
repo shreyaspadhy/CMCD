@@ -38,8 +38,8 @@ def load_model(model="log_sonar", config=None):
         return load_model_lgcp(model, config)
     if "many_gmm" in model:
         return load_model_manygmm(model, config)
-    # if 'gmm' in model:
-    #   return load_model_gmm(model, config)
+    if "gmm" in model:
+        return load_model_gmm(model, config)
     return load_model_other(model)
 
 
@@ -229,7 +229,10 @@ class ChallengingTwoDimensionalMixture(LogDensity):
 
 
 def load_model_gmm(model="gmm", config=None):
-    gmm = ChallengingTwoDimensionalMixture(config, sample_shape=(2,))
+    gmm = ChallengingTwoDimensionalMixture(
+        config,
+        num_dim=2,
+    )
 
     # log_density_fn = lambda x: np.squeeze(gmm.evaluate_log_density(x[None, :]))
 
