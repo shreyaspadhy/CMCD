@@ -18,5 +18,18 @@ To run methods
 ```
 python main.py --config.boundmode MCD_CAIS_sn --config.model funnel --config.N 300 --config.alpha 0.05 --config.emb_dim 48 --config.init_eps 0.1 -config.init_sigma 1 --config.iters 11000 --noconfig.pretrain_mfvi --config.train_vi --noconfig.train_eps --config.wandb.name "funnel replicate w/ cos_sq" --config.lr 0.01 --config.n_samples 2000 --config.beta_schedule cos_sq
 ```
+[Old wandb experiment with paper numbers](https://wandb.ai/shreyaspadhy/cais/runs/kh9n0y3n/workspace?workspace=user-shreyaspadhy)
 [Wandb experiment](https://wandb.ai/shreyaspadhy/final_cmcd/runs/wka879ae?workspace=user-shreyaspadhy)
 
+The paper numbers differ in the following ways: (1) Uses Geffner's manual ADAM implementation.
+
+#### LGCP Experiments
+
+```
+python main.py --config.boundmode MCD_CAIS_sn --config.model lgcp --config.N 20 --config.alpha 0.05 --config.emb_dim 20 --config.init_eps 0.00001 -config.init_sigma 1 --config.iters 37500 --config.pretrain_mfvi --config.train_vi --config.train_eps --config.wandb.name "lgcp replicate" --config.lr 0.0001 --config.n_samples 500 --config.mfvi_iters 20000
+```
+[Old wandb experiment with paper numbers](https://wandb.ai/shreyaspadhy/cais/runs/jemnkjp5/workspace?workspace=user-shreyaspadhy)
+[Wandb experiment]
+[Wandb experiment](https://wandb.ai/shreyaspadhy/final_cmcd/runs/325oa9q7?workspace=user-shreyaspadhy)
+
+Differences from the paper experiments: (1) The new run is about 10min slower, would be nice to figure out the bottleneck.
