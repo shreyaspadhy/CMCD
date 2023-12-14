@@ -254,6 +254,7 @@ def calculate_W2_distances(
     other_target_samples,
     n_samples,
     n_input_dist_seeds,
+    n_sinkhorn,
     log_prefix="",
 ):
     w2_dists, self_w2_dists = [], []
@@ -263,6 +264,11 @@ def calculate_W2_distances(
         other_target_samples_i = other_target_samples[
             i * n_samples : (i + 1) * n_samples, ...
         ]
+        assert n_sinkhorn <= n_samples
+        samples_i = samples_i[:n_sinkhorn, ...]
+        target_samples_i = target_samples_i[:n_sinkhorn, ...]
+        other_target_samples_i = other_target_samples_i[:n_sinkhorn, ...]
+
         w2_dists.append(W2_distance(samples_i, target_samples_i))
         self_w2_dists.append(W2_distance(target_samples_i, other_target_samples_i))
 

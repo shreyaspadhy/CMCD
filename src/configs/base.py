@@ -91,7 +91,7 @@ def get_config():
     config.train_vi = True
     config.train_eps = True
 
-    config.beta_schedule = None
+    config.beta_schedule = ""
     config.grad_clipping = False
 
     config.mfvi_iters = 150000
@@ -102,6 +102,7 @@ def get_config():
     config.id = -1
     config.run_cluster = 0
     config.n_samples = 500
+    config.n_sinkhorn = 300
     config.n_input_dist_seeds = 30
     config.emb_dim = 20
     config.nlayers = 3
@@ -137,7 +138,7 @@ def get_config():
     # Wandb Configs
     config.wandb = ml_collections.ConfigDict()
     config.wandb.log = True
-    config.wandb.project = "cmcd"
+    config.wandb.project = "final_cmcd"
     config.wandb.entity = "shreyaspadhy"
     config.wandb.code_dir = cwd
     config.wandb.name = ""

@@ -252,6 +252,7 @@ def main(config):
                 other_target_samples,
                 n_samples,
                 config.n_input_dist_seeds,
+                n_samples,
             )
 
             if config.use_ema:
@@ -261,6 +262,7 @@ def main(config):
                     other_target_samples,
                     n_samples,
                     config.n_input_dist_seeds,
+                    n_samples,
                     log_prefix="_ema",
                 )
 
