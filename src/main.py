@@ -1,4 +1,5 @@
 import os
+import pickle
 from functools import partial
 
 import boundingmachine as bm
@@ -278,28 +279,25 @@ def main(config):
                         wandb_prefix="images/final_sample_ema",
                     )
 
-        # params_train, params_notrain = unflatten(params_flat)
-        # params = {**params_train, **params_notrain}
+        params_train, params_notrain = unflatten(params_flat)
+        params = {**params_train, **params_notrain}
 
-        # if config.wandb.log_artifact:
-        #     artifact_name = f"{config.model}_{config.boundmode}_{config.nbridges}"
+        if config.wandb.log_artifact:
+            artifact_name = f"{config.model}_{config.boundmode}_{config.nbridges}"
 
-        #     artifact = wandb.Artifact(
-        #         artifact_name,
-        #         type="final params",
-        #     )
+            artifact = wandb.Artifact(
+                artifact_name,
+                type="final params",
+            )
 
-        #     # Save model
-        #     with artifact.new_file("params.pkl", "wb") as f:
-        #         pickle.dump(params, f)
+            # Save model
+            with artifact.new_file("params.pkl", "wb") as f:
+                pickle.dump(params, f)
 
-        #     wandb.log_artifact(artifact)
+            wandb.log_artifact(artifact)
 
 
 if __name__ == "__main__":
-    # if sys.argv:
-    #     # pass wandb API as argv[1] and set environment variable
-    #     # 'python mll_optim.py MY_API_KEY'
     os.environ["WANDB_API_KEY"] = "9835d6db89010f73306f92bb9a080c9751b25d28"
 
     # Adds jax flags to the program.

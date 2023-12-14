@@ -81,7 +81,6 @@ def get_config():
     config.N = 5  # 5 for all except NICE
     config.nbridges = 8
     config.lfsteps = 1
-    config.n_sinkhorn = 300
 
     config.emb_dim = 20
     config.nlayers = 3
