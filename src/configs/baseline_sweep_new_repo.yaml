@@ -1,0 +1,34 @@
+entity: shreyaspadhy
+project: cais
+program: main.py
+
+method: grid
+parameters:
+  boundmode:
+    values: ['MCD_ULA']
+  model:
+    # values: ['log_sonar', 'log_ionosphere', 'lorenz', 'brownian', 'banana', 'seeds']
+    values: ['log_sonar']
+  nbridges:
+    values: [256, 128, 64, 32, 16, 8]
+  N:
+    values: [5]
+  iters:
+    values: [150000]
+  pretrain_mfvi:
+    values: [True]
+  train_vi:
+    values: [True]
+  train_eps:
+    values: [True]
+  emb_dim:
+    values: [20]
+  n_samples:
+    values: [500]
+  
+
+command:
+  - python
+  - ${program}
+  - --config
+  - configs/base.py

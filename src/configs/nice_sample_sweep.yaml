@@ -7,10 +7,31 @@ parameters:
   model:
     values: ['nice']
   boundmode:
-    values: ['MCD_ULA', 'MCD_ULA_sn', 'UHA', 'MCD_U_a-lp-sn', 'MCD_CAIS_sn', 'MCD_CAIS_UHA_sn']
+    values: ['MCD_CAIS_sn']
   lr:
-    values: [1e-2, 1e-3, 1e-4]
-
+    values: [1e-4, 1e-3]
+  emb_dim:
+    values: [76, 256]
+  pretrain_mfvi:
+    values: [False]
+  train_eps:
+    values: [False]
+  init_eps:
+    values: [0.1, 0.15, 0.2, 0.3]
+  N:
+    values: [600]
+  iters:
+    values: [11000]
+  model:
+    # values: ['log_sonar', 'log_ionosphere', 'lorenz', 'brownian', 'banana', 'seeds']
+    values: ['nice']
+  nbridges:
+    values: [256]
+  init_sigma:
+    values: [1, 2, 3, 5]
+  n_samples:
+    values: [2000]
+  
 command:
   - python
   - ${program}
