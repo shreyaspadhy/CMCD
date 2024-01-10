@@ -13,7 +13,7 @@ def evolve_overdamped_cais(
     sample_kernel,
     log_prob_kernel,
     use_sn=False,
-    beta_schedule=None,
+    eps_schedule=None,
     grad_clipping=False,
 ):
     def U(z, beta):
@@ -43,7 +43,7 @@ def evolve_overdamped_cais(
 
         return init_eps * decay
 
-    def evolve(aux, i, stable=grad_clipping, beta_schedule=beta_schedule):
+    def evolve(aux, i, stable=grad_clipping, eps_schedule=eps_schedule):
         z, w, rng_key_gen = aux
         beta = betas[i]
 
@@ -51,9 +51,9 @@ def evolve_overdamped_cais(
         #         fk_mean = z - params["eps"] * jax.grad(U)(z, beta) - params["eps"] * apply_fun_sn(params["sn"], z, i) # - because it is gradient of U = -log \pi
         uf = gradU(z, beta) if stable else jax.grad(U)(z, beta)
 
-        if beta_schedule == "cos_sq":
+        if eps_schedule == "cos_sq":
             eps = _cosine_eps_schedule(params["eps"], i)
-        elif beta_schedule == "linear":
+        elif eps_schedule == "linear":
             eps = _eps_schedule(params["eps"], i)
         else:
             eps = params["eps"]

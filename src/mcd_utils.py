@@ -28,7 +28,7 @@ def evolve(
     rng_key_gen,
     params_fixed,
     log_prob_model,
-    beta_schedule=None,
+    eps_schedule=None,
     grad_clipping=False,
 ):
     mode = params_fixed[2]
@@ -142,7 +142,7 @@ def evolve(
             sample_kernel,
             log_prob_kernel,
             use_sn=True,
-            beta_schedule=beta_schedule,
+            eps_schedule=eps_schedule,
             grad_clipping=grad_clipping,
         )
     elif mode == "MCD_CAIS_var_sn":
@@ -156,7 +156,7 @@ def evolve(
             sample_kernel,
             log_prob_kernel,
             use_sn=True,
-            beta_schedule=beta_schedule,
+            eps_schedule=eps_schedule,
             grad_clipping=grad_clipping,
         )
     elif mode == "MCD_DNF":
@@ -183,7 +183,7 @@ def evolve(
             log_prob_kernel,
             use_sn=True,
             full_sn=True,
-            beta_schedule=beta_schedule,
+            eps_schedule=eps_schedule,
             grad_clipping=grad_clipping,
         )
     else:

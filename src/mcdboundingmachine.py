@@ -58,6 +58,7 @@ def initialize(
     else:
         params_notrain["eta"] = eta
 
+    # Initialise score networks if needed.
     if mode in [
         "MCD_ULA_sn",
         "MCD_U_e-lp-sna",
@@ -75,6 +76,7 @@ def initialize(
         "MCD_U_a-nv-sn",
         "MCD_CAIS_UHA_sn",
     ]:
+        # Initialise score networks with rho_dim also specified.
         init_fun_sn, apply_fun_sn = initialize_mcd_network(
             dim, emb_dim, nbridges, rho_dim=dim, nlayers=nlayers
         )
@@ -84,6 +86,8 @@ def initialize(
         print("No score network needed by the method.")
 
     # Everything related to betas
+    # betas are defined as a learnable function in [0, 1] given by normalised mgridref_y
+    # betas = cumsum(mgridref_y) / sum(mgridref_y)
     if mgridref_y is not None:
         ngridb = mgridref_y.shape[0] - 1
     else:
@@ -103,15 +107,21 @@ def initialize(
     return params_flat, unflatten, params_fixed
 
 
-def compute_ratio(
+def compute_log_elbo(
     seed,
     params_flat,
     unflatten,
     params_fixed,
     log_prob,
-    beta_schedule=None,
+    eps_schedule=None,
     grad_clipping=False,
 ):
+    """
+    Compute the log_ELBO as a sum/difference of log probabilities.
+
+    The log_ELBO is defined as:
+        L = log p(z_K) - log q(z_1) + \sum_{k=1}^{K-1} [log B_k(z_k  | z_{k+1}) - log F_k(z_k | z_{k+1})]
+    """
     params_train, params_notrain = unflatten(params_flat)
     params_notrain = jax.lax.stop_gradient(params_notrain)
     params = {**params_train, **params_notrain}  # Gets all parameters in single place
@@ -125,6 +135,8 @@ def compute_ratio(
     rng_key_gen = jax.random.PRNGKey(seed)
 
     rng_key, rng_key_gen = jax.random.split(rng_key_gen)
+
+    # We sample z_1 ~ q(z), and L = - log q(z_1)
     z = vd.sample_rep(rng_key, params["vd"])
     w = -vd.log_prob(params["vd"], z)
 
@@ -132,6 +144,8 @@ def compute_ratio(
     delta_H = jnp.array([0.0])
     if nbridges >= 1:
         rng_key, rng_key_gen = jax.random.split(rng_key_gen)
+        # Evolve the trajectory to calculate z_K
+        # w_mom = \sum_{k=1}^{K-1} [log B_k(z_k  | z_{k+1}) - log F_k(z_k | z_{k+1})]
         z, w_mom, _ = mcd_utils.evolve(
             z,
             betas,
@@ -139,13 +153,12 @@ def compute_ratio(
             rng_key,
             params_fixed,
             log_prob,
-            beta_schedule=beta_schedule,
+            eps_schedule=eps_schedule,
             grad_clipping=grad_clipping,
         )
-        #         jax.debug.breakpoint()
         w += w_mom
 
-    # Update weight with final model evaluation
+    # Add log p(z_K) to L
     w = w + log_prob(z)
     return -1.0 * w, (z, _)
 
@@ -157,22 +170,23 @@ def compute_bound(
     unflatten,
     params_fixed,
     log_prob,
-    beta_schedule=None,
+    eps_schedule=None,
     grad_clipping=False,
 ):
-    ratios, (z, _) = jax.vmap(
-        compute_ratio, in_axes=(0, None, None, None, None, None, None)
+    # Vmap over a batch of samples (identified by seeds)
+    batch_log_elbos, (z, _) = jax.vmap(
+        compute_log_elbo, in_axes=(0, None, None, None, None, None, None)
     )(
         seeds,
         params_flat,
         unflatten,
         params_fixed,
         log_prob,
-        beta_schedule,
+        eps_schedule,
         grad_clipping,
     )
-    # ratios, (z, _) = compute_ratio(seeds[0], params_flat, unflatten, params_fixed, log_prob)
-    return ratios.mean(), (ratios, z)
+    # batch_log_elbos, (z, _) = compute_log_elbo(seeds[0], params_flat, unflatten, params_fixed, log_prob)
+    return batch_log_elbos.mean(), (batch_log_elbos, z)
 
 
 def compute_bound_var(
@@ -181,19 +195,19 @@ def compute_bound_var(
     unflatten,
     params_fixed,
     log_prob,
-    beta_schedule=None,
+    eps_schedule=None,
     grad_clipping=False,
 ):
-    ratios, (z, _) = jax.vmap(
-        compute_ratio, in_axes=(0, None, None, None, None, None, None)
+    batch_log_elbos, (z, _) = jax.vmap(
+        compute_log_elbo, in_axes=(0, None, None, None, None, None, None)
     )(
         seeds,
         params_flat,
         unflatten,
         params_fixed,
         log_prob,
-        beta_schedule,
+        eps_schedule,
         grad_clipping,
     )
 
-    return jnp.clip(ratios.var(ddof=0), -1e7, 1e7), (ratios, z)
+    return jnp.clip(batch_log_elbos.var(ddof=0), -1e7, 1e7), (batch_log_elbos, z)

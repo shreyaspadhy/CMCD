@@ -41,6 +41,19 @@ def collect_eps(params_flat, unflatten, trainable):
         return unflatten(params_flat)[0]["eps"]
     else:
         return unflatten(params_flat)[1]["eps"]
+
+
+@functools.partial(jax.jit, static_argnums=(1, 2))
+def collect_mgridrefy(params_flat, unflatten, trainable):
+    if "mgridref_y" in trainable:
+        mgridrefy = unflatten(params_flat)[0]["mgridref_y"]
+    else:
+        mgridrefy = unflatten(params_flat)[1]["mgridref_y"]
+
+    gridref_y = jnp.cumsum(mgridrefy) / jnp.sum(mgridrefy)
+    gridref_y = jnp.concatenate([jnp.array([0.0]), gridref_y])
+
+    return gridref_y
     # return 0.
 
 
@@ -131,6 +144,9 @@ def run(
                 ),
                 f"{log_prefix}/gamma": np.array(
                     collect_gamma(params_flat, unflatten, trainable)
+                ),
+                f"{log_prefix}/mgridref_y": wandb.Histogram(
+                    np.array(collect_mgridrefy(params_flat, unflatten, trainable))
                 ),
                 "train_step": i,
             }

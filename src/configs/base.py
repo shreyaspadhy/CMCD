@@ -92,8 +92,9 @@ def get_config():
 
     config.train_vi = True
     config.train_eps = True
+    config.train_betas = True
 
-    config.beta_schedule = ""
+    config.eps_schedule = ""
     config.grad_clipping = False
 
     config.mfvi_iters = 150000

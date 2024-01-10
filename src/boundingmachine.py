@@ -70,7 +70,7 @@ def initialize(
     return params_flat, unflatten, params_fixed
 
 
-def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob):
+def compute_log_elbo(seed, params_flat, unflatten, params_fixed, log_prob):
     params_train, params_notrain = unflatten(params_flat)
     params_notrain = jax.lax.stop_gradient(params_notrain)
     params = {**params_train, **params_notrain}  # Gets all parameters in single place
@@ -105,7 +105,7 @@ def compute_ratio(seed, params_flat, unflatten, params_fixed, log_prob):
 
 # @functools.partial(jax.jit, static_argnums = (2, 3, 4))
 def compute_bound(seeds, params_flat, unflatten, params_fixed, log_prob):
-    ratios, (z, _) = jax.vmap(compute_ratio, in_axes=(0, None, None, None, None))(
+    ratios, (z, _) = jax.vmap(compute_log_elbo, in_axes=(0, None, None, None, None))(
         seeds, params_flat, unflatten, params_fixed, log_prob
     )
     return ratios.mean(), (ratios, z)

@@ -114,11 +114,13 @@ def main(config):
             wandb.log({"elbo_init": np.array(elbo_init)})
 
         if config.boundmode == "UHA":
-            trainable = ("eta", "mgridref_y")
+            trainable = "eta"
             if config.train_eps:
                 trainable = trainable + ("eps",)
             if config.train_vi:
                 trainable = trainable + ("vd",)
+            if config.train_betas:
+                trainable = trainable + ("mgridref_y",)
             params_flat, unflatten, params_fixed = bm.initialize(
                 dim=dim,
                 nbridges=config.nbridges,
@@ -135,11 +137,13 @@ def main(config):
             loss_fn = jax.jit(bm.compute_bound, static_argnums=(2, 3, 4))
 
         elif "MCD" in config.boundmode:
-            trainable = ("eta", "gamma", "mgridref_y")
+            trainable = ("eta", "gamma")
             if config.train_eps:
                 trainable = trainable + ("eps",)
             if config.train_vi:
                 trainable = trainable + ("vd",)
+            if config.train_betas:
+                trainable = trainable + ("mgridref_y",)
 
             print(f"Params being trained : {trainable}")
             params_flat, unflatten, params_fixed = mcdbm.initialize(
@@ -157,13 +161,13 @@ def main(config):
             if "var" in config.boundmode:
                 compute_bound_fn = partial(
                     mcdbm.compute_bound_var,
-                    beta_schedule=config.beta_schedule,
+                    eps_schedule=config.eps_schedule,
                     grad_clipping=config.grad_clipping,
                 )
             else:
                 compute_bound_fn = partial(
                     mcdbm.compute_bound,
-                    beta_schedule=config.beta_schedule,
+                    eps_schedule=config.eps_schedule,
                     grad_clipping=config.grad_clipping,
                 )
 
