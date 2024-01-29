@@ -50,6 +50,10 @@ Differences: (1) The new run has better $\ln Z$ estimates overall.
 python main.py --config.model many_gmm --config.boundmode MCD_CAIS_var_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 15 --config.grad_clipping --config.init_eps 0.65 --config.emb_dim 130 --config.lr 0.005 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "logvar 40gmm"
 ```
 
+```bash
+python main.py --config.model many_gmm --config.boundmode MCD_CAIS_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 15 --config.grad_clipping --config.init_eps 0.1 --config.emb_dim 130 --config.lr 0.005 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "kl 40gmm"
+```
+
 [Old KL Wandb experiment eps=0.65](https://wandb.ai/shreyaspadhy/cais/runs/5z3rdxgh?workspace=user-shreyaspadhy)
 [Old KL Wandb experiment eps=0.1](https://wandb.ai/shreyaspadhy/cais/runs/2rigzwcd?workspace=user-shreyaspadhy)
 [Old logvar Wandb experiment eps=0.65](https://wandb.ai/shreyaspadhy/cais/runs/9o0ccmpv?workspace=user-shreyaspadhy)
