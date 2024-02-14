@@ -302,7 +302,7 @@ def main(config):
 
 
 if __name__ == "__main__":
-    os.environ["WANDB_API_KEY"] = "9835d6db89010f73306f92bb9a080c9751b25d28"
+    os.environ["WANDB_API_KEY"] = ""
 
     # Adds jax flags to the program.
     jax.config.config_with_absl()
