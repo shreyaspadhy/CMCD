@@ -18,6 +18,33 @@ To run different methods and targets, following the template below -
 
 Below, we provide the commands replicating the exact hparam settings used in the paper, and the wandb links to the experiments.
 
+#### 40-GMM Experiments
+
+By default, in order to make comparisons to DDS/PIS, we use the same network architecture with time embeddings from the DDS repo. In order to run our method using the DDS architecture, you can set `--config.nn_arch dds` in the command line.
+
+```bash
+python main.py --config.model many_gmm --config.boundmode MCD_CAIS_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 60 --config.grad_clipping --config.init_eps 1 --config.eps_schedule cos_sq --config.lr 0.001 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "kl 40gmm pis net eps=1, cos_sq" --config.nn_arch dds
+```
+
+
+We also provide the commands for replicating the results in the arxiv version of the paper below, where we were using the NN architecture from the Geffner repo.
+
+```bash
+python main.py --config.model many_gmm --config.boundmode MCD_CAIS_var_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 15 --config.grad_clipping --config.init_eps 0.65 --config.emb_dim 130 --config.lr 0.005 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "logvar 40gmm"
+```
+
+```bash
+python main.py --config.model many_gmm --config.boundmode MCD_CAIS_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 15 --config.grad_clipping --config.init_eps 0.1 --config.emb_dim 130 --config.lr 0.005 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "kl 40gmm"
+```
+
+[[Old KL Wandb experiment eps=0.65]](https://wandb.ai/shreyaspadhy/cais/runs/5z3rdxgh?workspace=user-shreyaspadhy)
+
+[[Old KL Wandb experiment eps=0.1]](https://wandb.ai/shreyaspadhy/cais/runs/2rigzwcd?workspace=user-shreyaspadhy)
+
+[[Old logvar Wandb experiment eps=0.65]](https://wandb.ai/shreyaspadhy/cais/runs/9o0ccmpv?workspace=user-shreyaspadhy)
+
+[[Old logvar Wandb experiment eps=0.1]](https://wandb.ai/shreyaspadhy/cais/runs/236aqlcp?workspace=user-shreyaspadhy)
+
 #### Funnel Experiments
 
 ```
@@ -49,35 +76,6 @@ python main.py --config.boundmode MCD_CAIS_sn --config.model gmm --config.N 300 
 [[Original paper numbers]](https://wandb.ai/shreyaspadhy/cais/sweeps/n2exqhfq?workspace=user-shreyaspadhy)
 
 Differences: (1) The new run has better $\ln Z$ estimates overall.
-
-#### 40-GMM Experiments
-
-```bash
-python main.py --config.model many_gmm --config.boundmode MCD_CAIS_var_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 15 --config.grad_clipping --config.init_eps 0.65 --config.emb_dim 130 --config.lr 0.005 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "logvar 40gmm"
-```
-
-```bash
-python main.py --config.model many_gmm --config.boundmode MCD_CAIS_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 15 --config.grad_clipping --config.init_eps 0.1 --config.emb_dim 130 --config.lr 0.005 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "kl 40gmm"
-```
-
-```bash
-python main.py --config.model many_gmm --config.boundmode MCD_CAIS_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 60 --config.grad_clipping --config.init_eps 1 --config.eps_schedule cos_sq --config.lr 0.001 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "kl 40gmm pis net eps=1, cos_sq" --config.nn_arch dds
-```
-
-Trying trajectory balance 
-
-```bash
-python main.py --config.model many_gmm --config.boundmode MCD_CAIS_traj_bal_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 15 --config.grad_clipping --config.init_eps 0.65 --config.emb_dim 130 --config.lr 0.005 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "trajectory balance 40gmm"
-```
-
-
-[[Old KL Wandb experiment eps=0.65]](https://wandb.ai/shreyaspadhy/cais/runs/5z3rdxgh?workspace=user-shreyaspadhy)
-
-[[Old KL Wandb experiment eps=0.1]](https://wandb.ai/shreyaspadhy/cais/runs/2rigzwcd?workspace=user-shreyaspadhy)
-
-[[Old logvar Wandb experiment eps=0.65]](https://wandb.ai/shreyaspadhy/cais/runs/9o0ccmpv?workspace=user-shreyaspadhy)
-
-[[Old logvar Wandb experiment eps=0.1]](https://wandb.ai/shreyaspadhy/cais/runs/236aqlcp?workspace=user-shreyaspadhy)
 
 ## Citation
 
