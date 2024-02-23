@@ -79,6 +79,10 @@ python main.py --config.model many_gmm --config.boundmode MCD_CAIS_traj_bal_sn -
 
 [[Old logvar Wandb experiment eps=0.1]](https://wandb.ai/shreyaspadhy/cais/runs/236aqlcp?workspace=user-shreyaspadhy)
 
+## Citation
+
+Our code is forked from the excellent public repo for the LDVI paper found here - https://github.com/tomsons22/LDVI.
+
 If you use any of our code or ideas, please cite our work using the following BibTeX entry:
 
 ```bibtex

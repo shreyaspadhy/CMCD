@@ -6,3 +6,4 @@ src/saved_models/*
 logs/*
 wandb/*
 src/logs/*
+artifacts
