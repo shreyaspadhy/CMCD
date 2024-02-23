@@ -26,7 +26,6 @@ from utils import (
 
 jax_config.update("jax_traceback_filtering", "off")
 
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
 
 ml_collections.config_flags.DEFINE_config_file(
     "config",
@@ -46,6 +45,7 @@ FLAGS = flags.FLAGS
 #   - CAIS uses MCD_CAIS_sn
 #   - CAIS_UHA uses MCD_CAIS_UHA_sn
 #   - CAIS_var uses MCD_CAIS_var_sn
+#   - CAID_var and trajectory balance uses MCD_CAIS_traj_bal_sn
 #   - DNF uses MCD_DNF
 
 
@@ -156,11 +156,18 @@ def main(config):
                 mode=config.boundmode,
                 emb_dim=config.emb_dim,
                 nlayers=config.nlayers,
+                nn_arch=config.nn_arch,
             )
 
             if "var" in config.boundmode:
                 compute_bound_fn = partial(
                     mcdbm.compute_bound_var,
+                    eps_schedule=config.eps_schedule,
+                    grad_clipping=config.grad_clipping,
+                )
+            elif "traj_bal" in config.boundmode:
+                compute_bound_fn = partial(
+                    mcdbm.compute_bound_traj_balance,
                     eps_schedule=config.eps_schedule,
                     grad_clipping=config.grad_clipping,
                 )

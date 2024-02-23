@@ -83,6 +83,8 @@ def get_config():
     config.lfsteps = 1
 
     config.emb_dim = 20
+
+    # "geffner" arch actually just hardcodes nlayers=2.
     config.nlayers = 3
 
     config.init_eta = 0.0
@@ -93,6 +95,11 @@ def get_config():
     config.train_vi = True
     config.train_eps = True
     config.train_betas = True
+
+    config.nn_arch = "dds"
+    # This only affects dds and dds_grad nn_archs
+    # In order to control size of "geffner" arch, use emb_dim.
+    config.fully_connected_units = [64, 64]
 
     config.eps_schedule = ""
     config.grad_clipping = False

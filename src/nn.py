@@ -1,3 +1,5 @@
+from typing import List, Optional
+
 import jax
 import jax.numpy as np
 from jax.example_libraries.stax import (
@@ -9,10 +11,32 @@ from jax.example_libraries.stax import (
     parallel,
     serial,
 )
+from nn_dds import initialize_pis_grad_network, initialize_pis_network
 
 
 def initialize_embedding(rng, nbridges, emb_dim, factor=0.05):
     return jax.random.normal(rng, shape=(nbridges, emb_dim)) * factor
+
+
+def initialize_network(
+    x_dim,
+    emb_dim,
+    nbridges,
+    rho_dim=0,
+    nlayers=4,
+    nn_arch="geffner",
+    fully_connected_units=Optional[List],
+):
+    if nn_arch == "geffner":
+        return initialize_mcd_network(
+            x_dim, emb_dim, nbridges, rho_dim=rho_dim, nlayers=nlayers
+        )
+    elif nn_arch == "dds":
+        return initialize_pis_network(x_dim, fully_connected_units, rho_dim=rho_dim)
+    elif nn_arch == "dds_grad":
+        return initialize_pis_grad_network(
+            x_dim, fully_connected_units, rho_dim=rho_dim
+        )
 
 
 def initialize_mcd_network(x_dim, emb_dim, nbridges, rho_dim=0, nlayers=4):

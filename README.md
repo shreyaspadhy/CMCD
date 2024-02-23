@@ -60,6 +60,17 @@ python main.py --config.model many_gmm --config.boundmode MCD_CAIS_var_sn --conf
 python main.py --config.model many_gmm --config.boundmode MCD_CAIS_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 15 --config.grad_clipping --config.init_eps 0.1 --config.emb_dim 130 --config.lr 0.005 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "kl 40gmm"
 ```
 
+```bash
+python main.py --config.model many_gmm --config.boundmode MCD_CAIS_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 60 --config.grad_clipping --config.init_eps 1 --config.eps_schedule cos_sq --config.lr 0.001 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "kl 40gmm pis net eps=1, cos_sq" --config.nn_arch dds
+```
+
+Trying trajectory balance 
+
+```bash
+python main.py --config.model many_gmm --config.boundmode MCD_CAIS_traj_bal_sn --config.N 2000 --config.nbridges 256 --noconfig.pretrain_mfvi --config.init_sigma 15 --config.grad_clipping --config.init_eps 0.65 --config.emb_dim 130 --config.lr 0.005 --noconfig.train_eps --noconfig.train_vi --config.wandb.name "trajectory balance 40gmm"
+```
+
+
 [[Old KL Wandb experiment eps=0.65]](https://wandb.ai/shreyaspadhy/cais/runs/5z3rdxgh?workspace=user-shreyaspadhy)
 
 [[Old KL Wandb experiment eps=0.1]](https://wandb.ai/shreyaspadhy/cais/runs/2rigzwcd?workspace=user-shreyaspadhy)

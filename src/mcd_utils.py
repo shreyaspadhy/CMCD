@@ -145,7 +145,7 @@ def evolve(
             eps_schedule=eps_schedule,
             grad_clipping=grad_clipping,
         )
-    elif mode == "MCD_CAIS_var_sn":
+    elif mode in ["MCD_CAIS_var_sn", "MCD_CAIS_traj_bal_sn"]:
         return evolve_overdamped_var_cais(
             z,
             betas,

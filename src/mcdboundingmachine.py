@@ -1,9 +1,11 @@
+from typing import List, Optional
+
 import jax
 import jax.numpy as jnp
 import mcd_utils
 import variationaldist as vd
 from jax.flatten_util import ravel_pytree
-from nn import initialize_mcd_network
+from nn import initialize_network
 
 
 def initialize(
@@ -21,6 +23,8 @@ def initialize(
     nlayers=3,
     seed=1,
     mode="MCD_U_lp-e",
+    nn_arch="dds",
+    fully_connected_units=Optional[List],
 ):
     """
     Modes allowed:
@@ -65,9 +69,15 @@ def initialize(
         "MCD_U_a-lp-sna",
         "MCD_CAIS_sn",
         "MCD_CAIS_var_sn",
+        "MCD_CAIS_traj_bal_sn",
     ]:
-        init_fun_sn, apply_fun_sn = initialize_mcd_network(
-            dim, emb_dim, nbridges, nlayers=nlayers
+        init_fun_sn, apply_fun_sn = initialize_network(
+            dim,
+            emb_dim,
+            nbridges,
+            nlayers=nlayers,
+            nn_arch=nn_arch,
+            fully_connected_units=fully_connected_units,
         )
         params_train["sn"] = init_fun_sn(jax.random.PRNGKey(seed), None)[1]
     elif mode in [
@@ -77,13 +87,23 @@ def initialize(
         "MCD_CAIS_UHA_sn",
     ]:
         # Initialise score networks with rho_dim also specified.
-        init_fun_sn, apply_fun_sn = initialize_mcd_network(
-            dim, emb_dim, nbridges, rho_dim=dim, nlayers=nlayers
+        init_fun_sn, apply_fun_sn = initialize_network(
+            dim,
+            emb_dim,
+            nbridges,
+            rho_dim=dim,
+            nlayers=nlayers,
+            nn_arch=nn_arch,
+            fully_connected_units=fully_connected_units,
         )
+
         params_train["sn"] = init_fun_sn(jax.random.PRNGKey(seed), None)[1]
     else:
         apply_fun_sn = None
         print("No score network needed by the method.")
+
+    if mode == "MCD_CAIS_traj_bal_sn":
+        params_train["ln_z"] = 0.0
 
     # Everything related to betas
     # betas are defined as a learnable function in [0, 1] given by normalised mgridref_y
@@ -197,6 +217,7 @@ def compute_bound_var(
     log_prob,
     eps_schedule=None,
     grad_clipping=False,
+    ln_Z_correction=False,
 ):
     batch_log_elbos, (z, _) = jax.vmap(
         compute_log_elbo, in_axes=(0, None, None, None, None, None, None)
@@ -210,4 +231,33 @@ def compute_bound_var(
         grad_clipping,
     )
 
+    # E(x - ln_Z)^2 = E(x^2) - 2E(x)ln_Z + ln_Z^2
     return jnp.clip(batch_log_elbos.var(ddof=0), -1e7, 1e7), (batch_log_elbos, z)
+
+
+def compute_bound_traj_balance(
+    seeds,
+    params_flat,
+    unflatten,
+    params_fixed,
+    log_prob,
+    eps_schedule=None,
+    grad_clipping=False,
+    ln_Z_correction=False,
+):
+    batch_log_elbos, (z, _) = jax.vmap(
+        compute_log_elbo, in_axes=(0, None, None, None, None, None, None)
+    )(
+        seeds,
+        params_flat,
+        unflatten,
+        params_fixed,
+        log_prob,
+        eps_schedule,
+        grad_clipping,
+    )
+
+    # E(x - ln_Z)^2 = E(x^2) - 2E(x)ln_Z + ln_Z^2
+    params_train, params_notrain = unflatten(params_flat)
+
+    return jnp.mean((batch_log_elbos - params_train["ln_z"]) ** 2), (batch_log_elbos, z)
