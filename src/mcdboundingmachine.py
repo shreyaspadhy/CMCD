@@ -69,7 +69,6 @@ def initialize(
         "MCD_U_a-lp-sna",
         "MCD_CAIS_sn",
         "MCD_CAIS_var_sn",
-        "MCD_CAIS_traj_bal_sn",
     ]:
         init_fun_sn, apply_fun_sn = initialize_network(
             dim,
@@ -101,9 +100,6 @@ def initialize(
     else:
         apply_fun_sn = None
         print("No score network needed by the method.")
-
-    if mode == "MCD_CAIS_traj_bal_sn":
-        params_train["ln_z"] = 0.0
 
     # Everything related to betas
     # betas are defined as a learnable function in [0, 1] given by normalised mgridref_y
@@ -233,31 +229,3 @@ def compute_bound_var(
 
     # E(x - ln_Z)^2 = E(x^2) - 2E(x)ln_Z + ln_Z^2
     return jnp.clip(batch_log_elbos.var(ddof=0), -1e7, 1e7), (batch_log_elbos, z)
-
-
-def compute_bound_traj_balance(
-    seeds,
-    params_flat,
-    unflatten,
-    params_fixed,
-    log_prob,
-    eps_schedule=None,
-    grad_clipping=False,
-    ln_Z_correction=False,
-):
-    batch_log_elbos, (z, _) = jax.vmap(
-        compute_log_elbo, in_axes=(0, None, None, None, None, None, None)
-    )(
-        seeds,
-        params_flat,
-        unflatten,
-        params_fixed,
-        log_prob,
-        eps_schedule,
-        grad_clipping,
-    )
-
-    # E(x - ln_Z)^2 = E(x^2) - 2E(x)ln_Z + ln_Z^2
-    params_train, params_notrain = unflatten(params_flat)
-
-    return jnp.mean((batch_log_elbos - params_train["ln_z"]) ** 2), (batch_log_elbos, z)
