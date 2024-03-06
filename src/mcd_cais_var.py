@@ -98,7 +98,6 @@ def evolve_overdamped_var_cais(
         w += bk_log_prob - fk_log_prob
         rng_key, rng_key_gen = jax.random.split(rng_key_gen)
         aux = z_new, w, rng_key_gen
-        #         jax.debug.breakpoint()
         return aux, None
 
     print("running CAIS")
@@ -109,9 +108,5 @@ def evolve_overdamped_var_cais(
     aux, _ = jax.lax.scan(evolve, aux, np.arange(nbridges))
 
     z, w, _ = aux
-    #     jax.debug.breakpoint()
 
-    #     jax.debug.print("help {y} help", y=z)
-    #     jax.debug.print("help {y} help", y=w)
-    #     import pdb; pdb.set_trace()
     return z, w, None

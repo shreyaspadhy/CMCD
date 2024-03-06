@@ -49,7 +49,7 @@ python main.py --config.model many_gmm --config.boundmode MCD_CAIS_sn --config.N
 
 #### Funnel Experiments
 
-```
+```bash
 python main.py --config.boundmode MCD_CAIS_sn --config.model funnel --config.N 300 --config.alpha 0.05 --config.emb_dim 48 --config.init_eps 0.1 -config.init_sigma 1 --config.iters 11000 --noconfig.pretrain_mfvi --config.train_vi --noconfig.train_eps --config.wandb.name "funnel replicate w/ cos_sq" --config.lr 0.01 --config.n_samples 2000 --config.eps_schedule cos_sq
 ```
 [[Old wandb experiment with paper numbers]](https://wandb.ai/shreyaspadhy/cais/runs/kh9n0y3n/workspace?workspace=user-shreyaspadhy)

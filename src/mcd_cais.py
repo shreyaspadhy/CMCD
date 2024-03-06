@@ -58,7 +58,6 @@ def evolve_overdamped_cais(
         else:
             eps = params["eps"]
 
-        jax.debug.print(f"eps {eps}", y=eps)
         fk_mean = z - eps * uf - eps * apply_fun_sn(params["sn"], z, i)
 
         scale = np.sqrt(2 * eps)
