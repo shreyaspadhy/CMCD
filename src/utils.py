@@ -9,10 +9,11 @@ import matplotlib.pyplot as plt
 import ml_collections
 import numpy as np
 import ot
-import wandb
 from chex import Array
-from configs.base import FUNNEL_EPS_DICT, LR_DICT
 from jax import scipy as jscipy
+
+import wandb
+from configs.base import FUNNEL_EPS_DICT, LR_DICT
 
 
 def make_grid(x: Array, im_size: int, n: int = 16, wandb_prefix: str = ""):
@@ -168,11 +169,12 @@ def plot_samples(
                 info.loc_scaling,
                 wandb_prefix=f"{log_prefix}/target",
             )
+        n_sinkhorn = min(info.n_sinkhorn, samples.shape[0])
         wandb.log(
             {
                 f"{log_prefix}/w2": W2_distance(
-                    samples[: info.n_sinkhorn, ...],
-                    target_samples[: info.n_sinkhorn, ...],
+                    samples[:n_sinkhorn, ...],
+                    target_samples[:n_sinkhorn, ...],
                 )
             }
         )
